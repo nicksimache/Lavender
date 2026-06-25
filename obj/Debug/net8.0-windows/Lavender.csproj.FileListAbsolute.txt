@@ -36,3 +36,5 @@ C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\System.Text.Json.d
 C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
 C:\Users\nicks\source\repos\Lavender\obj\Debug\net8.0-windows\Lavender.csproj.AssemblyReference.cache
 C:\Users\nicks\source\repos\Lavender\obj\Debug\net8.0-windows\Lavender.csproj.Up2Date
+C:\Users\nicks\source\repos\Lavender\obj\Debug\net8.0-windows\Lavender.sourcelink.json
+C:\Users\nicks\source\repos\Lavender\obj\Debug\net8.0-windows\Lavender_MarkupCompile.lref

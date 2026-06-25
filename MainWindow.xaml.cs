@@ -5,10 +5,9 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+
 using Lavender.Services;
+using System.IO;
 
 namespace Lavender
 {
@@ -102,5 +101,125 @@ namespace Lavender
         }
 
         #endregion
+
+        #region File System
+
+        /// <summary>
+        /// Opens file directory for user to select a valid unity project
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void OpenProject_Click(object sender, RoutedEventArgs e)
+        {
+            foreach (var drive in Directory.GetLogicalDrives())
+            {
+                var item = new TreeViewItem();
+
+                item.Header = drive;
+                item.Tag = drive;
+
+                item.Items.Add(null);
+
+                item.Expanded += Folder_Expanded;
+
+                FolderView.Items.Add(item);
+            }
+        }
+
+        /// <summary>
+        /// Event handler for when a folder is expanded
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Folder_Expanded(object sender, RoutedEventArgs e)
+        {
+            var item = (TreeViewItem)sender;
+
+            if (item.Items.Count != 1 || item.Items[0] != null) return;
+
+            item.Items.Clear();
+
+            var fullPath = (string)item.Tag;
+
+            #region Get Folders
+
+            var directories = new List<string>();
+
+            try
+            {
+                var dirs = Directory.GetDirectories(fullPath);
+
+                if(dirs.Length > 0) { directories.AddRange(dirs); }
+            }
+            catch { }
+
+            directories.ForEach(directoryPath =>
+            {
+                var subitem = new TreeViewItem()
+                {
+                    Header = GetFileFolderName(directoryPath),
+                    Tag = directoryPath
+                };
+
+                subitem.Items.Add(null);
+
+                subitem.Expanded += Folder_Expanded;
+
+                item.Items.Add(subitem);
+            });
+
+            #endregion
+
+            #region Get Files
+
+            var files = new List<string>();
+
+            try
+            {
+                var fs = Directory.GetFiles(fullPath);
+
+                if (fs.Length > 0) { files.AddRange(fs); }
+            }
+            catch { }
+
+            files.ForEach(filePath =>
+            {
+                var subitem = new TreeViewItem()
+                {
+                    Header = GetFileFolderName(filePath),
+                    Tag = filePath
+                };
+
+                item.Items.Add(subitem);
+            });
+
+            #endregion
+
+
+
+        }
+
+        /// <summary>
+        /// Find the file or folder name from a full path
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        public static string GetFileFolderName(string path)
+        {
+            if (string.IsNullOrEmpty(path)) { return string.Empty; }
+
+            var normalizedPath = path.Replace('/', '\\');
+
+            var lastIndex = normalizedPath.LastIndexOf('\\');
+            if(lastIndex <= 0) { return path; }
+
+            return normalizedPath.Substring(lastIndex+1);
+        }
+
+        #endregion
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }

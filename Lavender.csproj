@@ -9,7 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Images\cs_icon.png" />
+    <None Remove="Images\C_Sharp_Logo_2023.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="OpenAI" Version="2.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\cs_icon.png" />
+    <Resource Include="Images\C_Sharp_Logo_2023.png" />
   </ItemGroup>
 
 </Project>
