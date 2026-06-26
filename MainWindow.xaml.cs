@@ -5,7 +5,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-
+using Microsoft.Win32;
 using Lavender.Services;
 using System.IO;
 
@@ -111,19 +111,28 @@ namespace Lavender
         /// <param name="e"></param>
         private void OpenProject_Click(object sender, RoutedEventArgs e)
         {
-            foreach (var drive in Directory.GetLogicalDrives())
+            var dialog = new OpenFolderDialog
             {
-                var item = new TreeViewItem();
+                Title = "Select a Unity Project"
+            };
 
-                item.Header = drive;
-                item.Tag = drive;
+            if (dialog.ShowDialog() != true) { return; }
 
-                item.Items.Add(null);
+            string selectedPath = dialog.FolderName;
+            FolderView.Items.Clear();
 
-                item.Expanded += Folder_Expanded;
+            var rootItem = new TreeViewItem
+            {
+                Header = Path.GetFileName(selectedPath),
+                Tag = selectedPath
+            };
 
-                FolderView.Items.Add(item);
-            }
+            rootItem.Items.Add(null);
+            rootItem.Expanded += Folder_Expanded;
+
+            FolderView.Items.Add(rootItem);
+
+            rootItem.IsExpanded = true;
         }
 
         /// <summary>
