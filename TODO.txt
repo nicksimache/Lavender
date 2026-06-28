@@ -1,0 +1,70 @@
+Lavender Roadmap
+
+DONE - Step 1: Single-file context
+- User selects a project folder
+- Project files appear in TreeView
+- User selects a .cs file
+- Lavender stores selected file path
+- User asks a question
+- Lavender sends selected file content + question to OpenAI
+- Response appears in chat
+
+Step 2: Improve single-file chat
+- Show selected file name in the UI
+- Prevent asking if no .cs file is selected
+- Add concise-answer prompt rules
+- Add loading state while waiting for AI
+- Disable Send button while request is running
+- Handle large files gracefully
+
+Step 3: Add file preview
+- When user clicks a .cs file, show its contents in a preview panel
+- Add line numbers later
+- Optionally syntax-highlight later
+
+Step 4: Clean project/file scanning
+- Only show useful files first: .cs
+- Hide folders like bin, obj, .git, Library, Temp
+- Add refresh project button
+- Store current project path
+
+Step 5: Multi-file manual context
+- Let user select multiple files as context
+- Show selected context files above chat
+- Send multiple selected files to OpenAI
+
+Step 6: Basic keyword search
+- Search all .cs files for terms from the user question
+- Pick top matching files
+- Send selected file + top matches as extra context
+- This is pre-RAG and easier than embeddings
+
+Step 7: Chunking
+- Split files into chunks by lines or methods/classes
+- Store chunk text, file path, start line, end line
+- Prepare data structure for retrieval
+
+Step 8: Embeddings
+- Create embeddings for each code chunk
+- Store vectors locally with chunk metadata
+- Only re-embed chunks when files change
+
+Step 9: Retrieval / RAG
+- Embed the user question
+- Compare question vector with chunk vectors
+- Retrieve top relevant chunks
+- Build prompt using only the best chunks
+- Answer with file names and line references
+
+Step 10: Code editing
+- Ask AI for suggested edits
+- Show diff before applying
+- User clicks Apply
+- Save backup before modifying files
+- Write changes to disk safely
+
+Step 11: Unity integration
+- Add Unity Editor plugin or local bridge
+- Send selected GameObject/scene info to Lavender
+- Allow safe actions like generating scripts or editor commands
+- Keep dangerous actions confirmation-based

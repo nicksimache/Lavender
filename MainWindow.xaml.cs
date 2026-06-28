@@ -16,7 +16,13 @@ namespace Lavender
     /// </summary>
     public partial class MainWindow : Window
     {
+        private bool isHighlighting = false;
+        private Point dragStartPoint;
+        private string? currSelectedFile;
+
         private readonly OpenAIService _openAIService;
+        private readonly PromptBuilder _promptBuilder;
+        private readonly List<string> contextFiles = new();
 
         #region Constructor
         /// <summary>
@@ -27,6 +33,9 @@ namespace Lavender
             InitializeComponent();
 
             _openAIService = new OpenAIService();
+
+            var fileParser = new FileParser();
+            _promptBuilder = new PromptBuilder(fileParser);
         }
 
         #endregion
@@ -53,12 +62,14 @@ namespace Lavender
         /// <param name="e"></param>
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
-            string userPrompt = UserInputBox.Text.Trim();
+            string input = UserInputBox.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(userPrompt)) return;
+            if (string.IsNullOrWhiteSpace(input)) return;
 
-            AddMessageBubble(userPrompt, true);
+            AddMessageBubble(input, true);
             UserInputBox.Text = "";
+
+            string userPrompt = _promptBuilder.PromptOnFileContext(contextFiles, input);
 
             try
             {
@@ -225,10 +236,108 @@ namespace Lavender
             return normalizedPath.Substring(lastIndex+1);
         }
 
-        #endregion
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void FolderView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
+            if (e.NewValue is not TreeViewItem item) return;
+            if (item.Tag is not string path) return;
 
+            if (File.Exists(path) &&
+                Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+            {
+                currSelectedFile = path;
+
+                PreviewFileNameText.Text = Path.GetFileName(currSelectedFile);
+
+                string code = File.ReadAllText(currSelectedFile);
+                ShowCodeInPreview(code);
+            }
         }
+
+        private void FilePreviewBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (isHighlighting)
+                return;
+
+            HighlightCurrentDocument();
+        }
+
+        private void ShowCodeInPreview(string code)
+        {
+            isHighlighting = true;
+
+            var spans = SyntaxHighlighter.HighlightCSharpCode(code);
+            RichTextBoxRenderer.Render(FilePreviewBox, spans);
+
+            isHighlighting = false;
+        }
+
+        private void HighlightCurrentDocument()
+        {
+            if (isHighlighting)
+                return;
+
+            string code = new TextRange(
+                FilePreviewBox.Document.ContentStart,
+                FilePreviewBox.Document.ContentEnd
+            ).Text;
+
+            ShowCodeInPreview(code);
+        }
+
+        private void FolderView_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed)
+                return;
+
+            if (FolderView.SelectedItem is not TreeViewItem item)
+                return;
+
+            if (item.Tag is not string path)
+                return;
+
+            if (!File.Exists(path))
+                return;
+
+            if (!Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            DragDrop.DoDragDrop(FolderView, path, DragDropEffects.Copy);
+        }
+
+        private void ChatPanel_DragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.StringFormat))
+                e.Effects = DragDropEffects.Copy;
+            else
+                e.Effects = DragDropEffects.None;
+
+            e.Handled = true;
+        }
+
+        private void ChatPanel_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.StringFormat))
+                return;
+
+            string? path = e.Data.GetData(DataFormats.StringFormat) as string;
+
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            if (!File.Exists(path))
+                return;
+
+            if (!Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            if (!contextFiles.Contains(path))
+                contextFiles.Add(path);
+
+            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+        }
+
+
+        #endregion
+
     }
 }
