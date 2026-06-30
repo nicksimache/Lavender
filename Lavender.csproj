@@ -22,4 +22,8 @@
     <Resource Include="Images\C_Sharp_Logo_2023.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Chunking\" />
+  </ItemGroup>
+
 </Project>

@@ -8,6 +8,7 @@ using System.Windows.Media;
 using Microsoft.Win32;
 using Lavender.Services;
 using System.IO;
+using Lavender.Search;
 
 namespace Lavender
 {
@@ -20,8 +21,14 @@ namespace Lavender
         private Point dragStartPoint;
         private string? currSelectedFile;
 
+        // nullable services since they require project dir as constructor fields
+        private ProjectScanner? _projectScanner;
+        private ProjectSearchService? _projectSearchService;
+
+
         private readonly OpenAIService _openAIService;
         private readonly PromptBuilder _promptBuilder;
+        private readonly ProjectSearchService projectSearchService;
         private readonly List<string> contextFiles = new();
 
         #region Constructor
@@ -69,7 +76,24 @@ namespace Lavender
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
 
-            string userPrompt = _promptBuilder.PromptOnFileContext(contextFiles, input);
+            if (_projectSearchService == null)
+                return;
+
+            ProjectSearchService projectSearchService = _projectSearchService;
+            List<SearchResult> SearchResult = projectSearchService.Search(input);
+            List<string> keywordSearchFiles = new List<string>();
+
+            foreach(var searchResult in SearchResult)
+            {
+                keywordSearchFiles.Add(searchResult.FilePath);
+            }
+
+            string userPrompt = _promptBuilder.PromptOnFileContext(contextFiles, keywordSearchFiles, input);
+
+            foreach (var file in keywordSearchFiles)
+            {
+                AddMessageBubble(file, false);
+            }
 
             try
             {
@@ -143,6 +167,9 @@ namespace Lavender
 
             FolderView.Items.Add(rootItem);
 
+            _projectScanner = new ProjectScanner(selectedPath);
+            _projectSearchService = new ProjectSearchService(_projectScanner);
+
             rootItem.IsExpanded = true;
         }
 
@@ -169,7 +196,16 @@ namespace Lavender
             {
                 var dirs = Directory.GetDirectories(fullPath);
 
-                if(dirs.Length > 0) { directories.AddRange(dirs); }
+                if(dirs.Length > 0)
+                {
+                    foreach(var d in dirs)
+                    {
+                        if (!ProjectScanner.ShouldIgnoreFolder(d))
+                        {
+                            directories.Add(d);
+                        }
+                    }
+                }
             }
             catch { }
 
@@ -198,7 +234,16 @@ namespace Lavender
             {
                 var fs = Directory.GetFiles(fullPath);
 
-                if (fs.Length > 0) { files.AddRange(fs); }
+                if (fs.Length > 0) 
+                {
+                    foreach(var f in fs)
+                    {
+                        if (!ProjectScanner.ShouldIgnoreFile(f))
+                        {
+                            files.Add(f);
+                        }
+                    }
+                }
             }
             catch { }
 

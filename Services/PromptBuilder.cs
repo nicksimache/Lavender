@@ -14,14 +14,14 @@ namespace Lavender.Services
             _fileParser = fileParser;
         }
 
-        public string PromptOnFileContext(List<string> filePaths, string prompt)
+        public string PromptOnFileContext(List<string> contextFiles, List<string> retrievedFiles, string prompt)
         {
-            if (filePaths.Count == 0) { return prompt; }
-            string files = "";
+            string contextFilesString = "";
+            string retrievedFilesString = "";
             
-            foreach (string path in filePaths)
+            foreach (string path in contextFiles)
             {
-                files += $"""
+                contextFilesString += $"""
                     File:
                     {path}
                     
@@ -33,36 +33,69 @@ namespace Lavender.Services
 
                     """;
             }
-            return BuildPrompt(files, prompt);
+
+            foreach (var path in retrievedFiles)
+            {
+                retrievedFilesString += $"""
+                    File:
+                    {path}
+                    
+                    Source Code:
+                    
+                    ```csharp
+                    {_fileParser.ReadFile(path)}
+                    ```
+
+                    """;
+            }
+            return BuildPrompt(contextFilesString, retrievedFilesString, prompt);
         }
 
-        private string BuildPrompt(string fileContent, string question)
+        private string BuildPrompt(string contextFiles, string retrievedFiles, string question)
         {
-        return $"""
-            You are an expert C# and Unity programming assistant.
-                
-            You have been given a single source file from the user's project.
+            return $"""
+                You are an expert C# and Unity programming assistant.
 
-            Answer the user's question using only the information contained in this file.
+                You are helping answer questions about the user's Unity project.
 
-            If the answer cannot be determined from this file alone, clearly state that and explain what additional files or information would be needed. Do not invent or assume code that is not shown.
+                You may be given:
+                - One or more files explicitly selected by the user.
+                - Additional files retrieved automatically because they appear relevant to the user's question.
+                - No project files at all.
 
-            When referencing code, mention the relevant class, method, property, or variable names.
+                Only use the provided project files when answering.
 
-            Keep your answer concise by default.
+                If the provided files are insufficient to answer the question, clearly explain what additional files or information would be needed. Do not invent code or assume implementations that are not shown.
 
-            For broad questions like "what does this file do?", answer in:
-            - 1 short summary paragraph
-            - 3-5 bullet points max
-            - only mention important classes/methods
+                When discussing code:
+                - Reference the relevant class, method, property, variable, or file names.
+                - Prefer concise explanations.
+                - If multiple files are provided, explain how they relate when appropriate.
 
-            Do not explain every line unless the user asks for a detailed walkthrough.
-            
-            {fileContent}
+                For broad questions such as "What does this system do?" or "Explain this file":
+                - Begin with a short summary.
+                - Follow with 3–5 important bullet points.
+                - Focus on the most important classes, methods, and interactions.
+                - Do not explain every line unless requested.
 
-            User Question:
-            {question}
-            """;
+                ======================
+                PROJECT CONTEXT
+                ======================
+
+                {contextFiles}
+
+                ======================
+                AUTOMATICALLY RETRIEVED FILES FROM KEYWORD SEARCH
+                ======================
+
+                {retrievedFiles}
+
+                ======================
+                USER QUESTION
+                ======================
+
+                {question}
+                """;
         }
 
     }
