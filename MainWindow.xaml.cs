@@ -28,6 +28,7 @@ namespace Lavender
 
         private readonly OpenAIService _openAIService;
         private readonly PromptBuilder _promptBuilder;
+        private readonly ProjectIndexer _projectIndexer;
         private readonly ProjectSearchService projectSearchService;
         private readonly List<string> contextFiles = new();
 
@@ -43,6 +44,20 @@ namespace Lavender
 
             var fileParser = new FileParser();
             _promptBuilder = new PromptBuilder(fileParser);
+
+            _projectIndexer = new ProjectIndexer();
+
+            Loaded += MainWindow_Loaded;
+        }
+
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            await InitializeAsync();
+        }
+
+        private async Task InitializeAsync()
+        {
+            await FastApiService.Instance.StartServerAsync();
         }
 
         #endregion
@@ -144,7 +159,7 @@ namespace Lavender
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void OpenProject_Click(object sender, RoutedEventArgs e)
+        private async void OpenProject_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFolderDialog
             {
@@ -171,6 +186,9 @@ namespace Lavender
             _projectSearchService = new ProjectSearchService(_projectScanner);
 
             rootItem.IsExpanded = true;
+
+            // Were embedding project here for now
+            await _projectIndexer.IndexProjectAsync(selectedPath);
         }
 
         /// <summary>

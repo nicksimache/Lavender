@@ -46,6 +46,10 @@
         "net8.0-windows7.0": {
           "targetAlias": "net8.0-windows",
           "dependencies": {
+            "Microsoft.CodeAnalysis.CSharp": {
+              "target": "Package",
+              "version": "[5.6.0, )"
+            },
             "OpenAI": {
               "target": "Package",
               "version": "[2.11.0, )"

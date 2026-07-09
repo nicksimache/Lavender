@@ -5,6 +5,10 @@ obj/
 # Visual Studio
 .vs/
 
+# Build output
+bin/
+obj/
+
 # User-specific files
 *.user
 *.suo
@@ -30,3 +34,11 @@ publish/
 # Windows
 Thumbs.db
 Desktop.ini
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Generated Data
+lavender_vectors/
