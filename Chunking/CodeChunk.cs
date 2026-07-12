@@ -36,4 +36,66 @@ namespace Lavender.Chunking
         public string Code { get; set; } = "";
         public string EmbeddingText { get; set; } = "";
     }
+
+    /// <summary>
+    /// Code chunk data structure that gets sent to python api
+    /// </summary>
+    public class PythonCodeChunk
+    {
+        public string id { get; set; } = "";
+        public string file_path { get; set; } = "";
+        public string chunk_type { get; set; } = "";
+        public string @namespace { get; set; } = "";
+        public string class_name { get; set; } = "";
+        public string member_name { get; set; } = "";
+        public string signature { get; set; } = "";
+        public int start_line { get; set; } = 0;
+        public int end_line { get; set; } = 0;
+        public string code { get; set; } = "";
+        public string embedding_text { get; set; } = "";
+
+        public static PythonCodeChunk ToPythonChunk(Chunking.CodeChunk chunk)
+        {
+            return new PythonCodeChunk
+            {
+                id = chunk.Id,
+                file_path = chunk.FilePath,
+                chunk_type = chunk.ChunkType.ToString(),
+                @namespace = chunk.Namespace,
+                class_name = chunk.ClassName,
+                member_name = chunk.MemberName,
+                signature = chunk.Signature,
+                start_line = chunk.StartLine,
+                end_line = chunk.EndLine,
+                code = chunk.Code,
+                embedding_text = chunk.EmbeddingText
+            };
+
+        }
+    }
+
+    /// <summary>
+    /// New chunk class representing the data that gets returned from vector search in python service
+    /// </summary>
+    public class VectorSearchCodeChunk
+    {
+        public string file_path { get; set; } = "";
+        public string chunk_type { get; set; } = "";
+        public string @namespace { get; set; } = "";
+        public string class_name { get; set; } = "";
+        public string member_name { get; set; } = "";
+        public string signature { get; set; } = "";
+        public int start_line { get; set; } = 0;
+        public int end_line { get; set; } = 0;
+        public string code { get; set; } = "";
+        public double distance { get; set; } = 0.0;
+    }
+
+    /// <summary>
+    /// Return type of the search api
+    /// </summary>
+    public class VectorSearchCodeChunkObject
+    {
+        public List<VectorSearchCodeChunk> list = new List<VectorSearchCodeChunk>();
+    }
 }

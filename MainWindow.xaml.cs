@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using Lavender.Services;
 using System.IO;
 using Lavender.Search;
+using Lavender.Chunking;
 
 namespace Lavender
 {
@@ -73,6 +74,12 @@ namespace Lavender
 
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            FastApiService.Instance.StopServer();
+            base.OnClosed(e);
+        }
+
         #endregion
 
         #region Chat
@@ -91,24 +98,15 @@ namespace Lavender
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
 
-            if (_projectSearchService == null)
-                return;
+            VectorSearchCodeChunkObject ret = await FastApiService.Instance.SearchProjectAsync(input, 5);
 
-            ProjectSearchService projectSearchService = _projectSearchService;
-            List<SearchResult> SearchResult = projectSearchService.Search(input);
-            List<string> keywordSearchFiles = new List<string>();
-
-            foreach(var searchResult in SearchResult)
+            MessageBox.Show(ret.list.Count.ToString());
+            foreach (var chunk in ret.list)
             {
-                keywordSearchFiles.Add(searchResult.FilePath);
+                Console.WriteLine(chunk);
             }
 
-            string userPrompt = _promptBuilder.PromptOnFileContext(contextFiles, keywordSearchFiles, input);
-
-            foreach (var file in keywordSearchFiles)
-            {
-                AddMessageBubble(file, false);
-            }
+            string userPrompt = _promptBuilder.PromptOnFileContext(contextFiles, ret.list, input);
 
             try
             {
@@ -119,6 +117,7 @@ namespace Lavender
             {
                 AddMessageBubble($"Error: {ex.Message}", false);
             }
+
         }
 
         private void AddMessageBubble(string message, bool isUser)

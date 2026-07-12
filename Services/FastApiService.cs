@@ -6,12 +6,15 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
+using Lavender.Chunking;
 
 namespace Lavender.Services
 {
     internal class FastApiService
     {
         private static FastApiService? _instance;
+        private Process? _serverProcess;
 
         public static FastApiService Instance 
         { 
@@ -20,44 +23,6 @@ namespace Lavender.Services
                 if(_instance == null) _instance = new FastApiService();
                 return _instance; 
             } 
-        }
-
-        /// <summary>
-        /// New chunk class that gets sent to python api
-        /// Made this so if we want to change codechunk in the future to include data relevant to WPF project - won't affect data sent to api
-        /// </summary>
-        private class PythonCodeChunk
-        {
-            public string id { get; set; } = "";
-            public string file_path { get; set; } = "";
-            public string chunk_type { get; set; } = "";
-            public string @namespace { get; set; } = "";
-            public string class_name { get; set; } = "";
-            public string member_name { get; set; } = "";
-            public string signature { get; set; } = "";
-            public int start_line { get; set; } = 0;
-            public int end_line { get; set; } = 0;
-            public string code { get; set; } = "";
-            public string embedding_text { get; set; } = "";
-
-            public static PythonCodeChunk ToPythonChunk(Chunking.CodeChunk chunk)
-            {
-                return new PythonCodeChunk
-                {
-                    id = chunk.Id,
-                    file_path = chunk.FilePath,
-                    chunk_type = chunk.ChunkType.ToString(),
-                    @namespace = chunk.Namespace,
-                    class_name = chunk.ClassName,
-                    member_name = chunk.MemberName,
-                    signature = chunk.Signature,
-                    start_line = chunk.StartLine,
-                    end_line = chunk.EndLine,
-                    code = chunk.Code,
-                    embedding_text = chunk.EmbeddingText
-                };
-
-            }
         }
 
         #region HTTPClient
@@ -82,29 +47,88 @@ namespace Lavender.Services
 
         public async Task StartServerAsync()
         {
-            if (await IsServerRunning())
+            if (await IsServerRunningAsync())
                 return;
 
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments =
-                    "/C .\\.venv\\Scripts\\activate.bat && uvicorn main:app --port 8000",
-                WorkingDirectory =
-                    @"C:\Users\nicks\source\repos\Lavender\AI_Services",
-                CreateNoWindow = true,
-                UseShellExecute = false
-            });
+            string projectRoot =
+                @"C:\Users\nicks\source\repos\Lavender";
 
-            await WaitForServer();
+            string pythonPath =
+                Path.Combine(projectRoot, ".venv", "Scripts", "python.exe");
+
+            string aiDirectory =
+                Path.Combine(projectRoot, "AI_Services");
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = pythonPath,
+                Arguments = "-m uvicorn main:app --host 127.0.0.1 --port 8000",
+                WorkingDirectory = aiDirectory,
+
+                UseShellExecute = false,
+                CreateNoWindow = true,
+
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            _serverProcess = new Process
+            {
+                StartInfo = startInfo
+            };
+
+            _serverProcess.OutputDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                    Debug.WriteLine($"FastAPI: {e.Data}");
+            };
+
+            _serverProcess.ErrorDataReceived += (_, e) =>
+            {
+                if (!string.IsNullOrWhiteSpace(e.Data))
+                    Debug.WriteLine($"FastAPI ERROR: {e.Data}");
+            };
+
+            if (!_serverProcess.Start())
+                throw new InvalidOperationException("Could not start FastAPI.");
+
+            _serverProcess.BeginOutputReadLine();
+            _serverProcess.BeginErrorReadLine();
+
+            await WaitForServerAsync();
         }
 
-        private async Task WaitForServer()
+        private async Task<bool> IsServerRunningAsync()
         {
-            while (!await IsServerRunning())
+            try
             {
+                using var response = await httpClient.GetAsync("");
+                return response.IsSuccessStatusCode;
+            }
+            catch (HttpRequestException)
+            {
+                return false;
+            }
+        }
+
+        private async Task WaitForServerAsync()
+        {
+            for (int attempt = 0; attempt < 30; attempt++)
+            {
+                if (_serverProcess?.HasExited == true)
+                {
+                    throw new InvalidOperationException(
+                        $"FastAPI exited during startup with code {_serverProcess.ExitCode}.");
+                }
+
+                if (await IsServerRunningAsync())
+                    return;
+
                 await Task.Delay(500);
             }
+
+            throw new TimeoutException(
+                "FastAPI did not start on localhost:8000.");
         }
 
         public async Task EmbedProjectAsync(List<Chunking.CodeChunk> chunks)
@@ -120,6 +144,38 @@ namespace Lavender.Services
                     request);
 
             response.EnsureSuccessStatusCode();
+        }
+
+        public async Task<VectorSearchCodeChunkObject> SearchProjectAsync(string query, int topK)
+        {
+            var request = new
+            {
+                query,
+                top_k = topK
+            };
+
+            HttpResponseMessage response =
+                await httpClient.PostAsJsonAsync("search", request);
+
+            response.EnsureSuccessStatusCode();
+
+            VectorSearchCodeChunkObject? searchResponse =
+                await response.Content.ReadFromJsonAsync<VectorSearchCodeChunkObject>();
+
+            if (searchResponse == null)
+                throw new Exception("Search returned no data.");
+
+            return searchResponse;
+        }
+
+        public void StopServer()
+        {
+            if (_serverProcess is { HasExited: false })
+            {
+                _serverProcess.Kill(entireProcessTree: true);
+                _serverProcess.Dispose();
+                _serverProcess = null;
+            }
         }
 
         #endregion

@@ -41,6 +41,9 @@ def get_embedding(text: str) -> list[float]:
     )
     return response.data[0].embedding
 
+@app.get("/")
+def root():
+    return {"message": "backend server runnning"} 
 
 @app.post("/embed-project")
 def embed_project(request: EmbedProjectRequest):
@@ -78,13 +81,29 @@ def search(request: SearchRequest):
     table = db.open_table(TABLE_NAME)
     query_vector = get_embedding(request.query)
 
-    results = (
+    raw_results = (
         table.search(query_vector)
+        .distance_type("cosine")
         .limit(request.top_k)
         .to_list()
     )
 
+    results = []
+
+    for row in raw_results:
+        results.append({
+            "file_path": row["file_path"],
+            "chunk_type": row["chunk_type"],
+            "namespace": row["namespace"],
+            "class_name": row["class_name"],
+            "member_name": row["member_name"],
+            "signature": row["signature"],
+            "start_line": row["start_line"],
+            "end_line": row["end_line"],
+            "code": row["code"],
+            "distance": row["_distance"]
+        })
+
     return {
-        "query": request.query,
         "results": results
     }
