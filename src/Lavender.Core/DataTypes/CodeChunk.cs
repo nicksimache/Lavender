@@ -1,7 +1,11 @@
 using System.Text.Json.Serialization;
 
-namespace Lavender.Core.Chunking
+namespace Lavender.Core.DataTypes
 {
+
+    /// <summary>
+    /// Code chunk data structure for semantic search
+    /// </summary>
     public class CodeChunk
     {
         public enum E_ChunkType
@@ -33,7 +37,10 @@ namespace Lavender.Core.Chunking
         public string EmbeddingText { get; set; } = "";
     }
 
-    public class PythonCodeChunk
+    /// <summary>
+    /// CodeChunk object that gets sent to python api for semantic search
+    /// </summary>
+    public class CodeChunk_ToPython
     {
         public string id { get; set; } = "";
         public string file_path { get; set; } = "";
@@ -47,9 +54,14 @@ namespace Lavender.Core.Chunking
         public string code { get; set; } = "";
         public string embedding_text { get; set; } = "";
 
-        public static PythonCodeChunk ToPythonChunk(CodeChunk chunk)
+        /// <summary>
+        /// Takes in a code chunk and returns it in the python object form
+        /// </summary>
+        /// <param name="chunk"></param>
+        /// <returns></returns>
+        public static CodeChunk_ToPython ToPythonChunk(CodeChunk chunk)
         {
-            return new PythonCodeChunk
+            return new CodeChunk_ToPython
             {
                 id = chunk.Id,
                 file_path = chunk.FilePath,
@@ -66,6 +78,10 @@ namespace Lavender.Core.Chunking
         }
     }
 
+    /// <summary>
+    /// Code chunk object with score that is the result of semantic search
+    /// Serialized in JSON to enable transfer between backend
+    /// </summary>
     public class VectorSearchCodeChunk
     {
         [JsonPropertyName("file_path")]
@@ -99,7 +115,11 @@ namespace Lavender.Core.Chunking
         public double Distance { get; set; }
     }
 
-    public class VectorSearchCodeChunkObject
+    /// <summary>
+    /// Code chunk object that is returned by call to the semantic search api
+    /// Serialized with JSON to enable transfer between backend
+    /// </summary>
+    public class VectorSearchCodeChunk_ObjectRecv
     {
         [JsonPropertyName("results")]
         public List<VectorSearchCodeChunk> Results { get; set; } = new();

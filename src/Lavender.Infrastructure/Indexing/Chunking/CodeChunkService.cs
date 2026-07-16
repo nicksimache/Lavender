@@ -5,20 +5,23 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Lavender.Core.Chunking;
+using Lavender.Core.DataTypes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Lavender.Infrastructure.Chunking
+namespace Lavender.Infrastructure.Indexing.Chunking
 {
     public class CodeChunkService
     {
         public static List<CodeChunk> GetCodeChunksFromFolder(string dir)
         {
             var codeChunks = new List<CodeChunk>();
-            
-            foreach(var file in Directory.GetFiles(dir))
+
+            foreach (string file in Directory.GetFiles(
+                         dir,
+                         "*.cs",
+                         SearchOption.AllDirectories))
             {
                 codeChunks.AddRange(GetCodeChunks(file));    
             }

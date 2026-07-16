@@ -7,7 +7,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
-using Lavender.Core.Chunking;
+using Lavender.Core.DataTypes;
 
 namespace Lavender.Infrastructure.Backend
 {
@@ -149,7 +149,7 @@ namespace Lavender.Infrastructure.Backend
         {
             var request = new
             {
-                chunks = chunks.Select(chunk => PythonCodeChunk.ToPythonChunk(chunk))
+                chunks = chunks.Select(chunk => CodeChunk_ToPython.ToPythonChunk(chunk))
             };
 
             HttpResponseMessage response =
@@ -160,7 +160,7 @@ namespace Lavender.Infrastructure.Backend
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task<VectorSearchCodeChunkObject> SearchProjectAsync(string query, int topK)
+        public async Task<VectorSearchCodeChunk_ObjectRecv> SearchProjectAsync(string query, int topK)
         {
             var request = new
             {
@@ -173,8 +173,8 @@ namespace Lavender.Infrastructure.Backend
 
             response.EnsureSuccessStatusCode();
 
-            VectorSearchCodeChunkObject? searchResponse =
-                await response.Content.ReadFromJsonAsync<VectorSearchCodeChunkObject>();
+            VectorSearchCodeChunk_ObjectRecv? searchResponse =
+                await response.Content.ReadFromJsonAsync<VectorSearchCodeChunk_ObjectRecv>();
 
             if (searchResponse == null)
                 throw new Exception("Search returned no data.");
