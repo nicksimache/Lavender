@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Images\cs_icon.png" />
-    <None Remove="Images\C_Sharp_Logo_2023.png" />
+    <ApplicationDefinition Include="src\Lavender.App\App.xaml" />
+    <Page Remove="src\Lavender.App\App.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,12 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Images\cs_icon.png" />
-    <Resource Include="Images\C_Sharp_Logo_2023.png" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Chunking\" />
+    <Resource Include="src\Lavender.App\Assets\Images\cs_icon.png" />
+    <Resource Include="src\Lavender.App\Assets\Images\C_Sharp_Logo_2023.png" />
   </ItemGroup>
 
 </Project>

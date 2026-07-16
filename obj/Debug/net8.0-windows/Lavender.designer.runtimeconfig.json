@@ -12,11 +12,10 @@
       }
     ],
     "additionalProbingPaths": [
-      "C:\\Users\\nicks\\.dotnet\\store\\|arch|\\|tfm|",
-      "C:\\Users\\nicks\\.nuget\\packages"
+      "C:\\Users\\nsima\\.dotnet\\store\\|arch|\\|tfm|",
+      "C:\\Users\\nsima\\.nuget\\packages"
     ],
     "configProperties": {
-      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": true,
       "CSWINRT_USE_WINDOWS_UI_XAML_PROJECTIONS": false,
       "Microsoft.NETCore.DotNetHostPolicy.SetAppPaths": true
     }
