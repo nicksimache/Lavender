@@ -1,4 +1,4 @@
-using Lavender.Core.Chunking;
+using Lavender.Core.DataTypes;
 using Lavender.Infrastructure.FileSystem;
 
 namespace Lavender.Application.Chat

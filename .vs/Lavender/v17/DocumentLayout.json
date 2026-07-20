@@ -3,84 +3,44 @@
   "WorkspaceRootPath": "C:\\Users\\nicks\\source\\repos\\Lavender\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.infrastructure\\filesystem\\solutionloader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.infrastructure\\filesystem\\solutionloader.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\fastapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\fastapiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.app\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.app\\mainwindow.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\chunking\\codechunk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:chunking\\codechunk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.app\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.app\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\promptbuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\promptbuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.app\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.app\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\chunking\\codechunkservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:chunking\\codechunkservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.infrastructure\\indexing\\symbol\\symbolindexingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.infrastructure\\indexing\\symbol\\symbolindexingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\search\\projectsearchservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:search\\projectsearchservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.core\\datatypes\\codechunk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.core\\datatypes\\codechunk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\openaiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\openaiservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.infrastructure\\indexing\\projectindexer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.infrastructure\\indexing\\projectindexer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\fileparser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\fileparser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.infrastructure\\indexing\\chunking\\codechunkservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.infrastructure\\indexing\\chunking\\codechunkservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\search\\searchresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:search\\searchresult.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\projectindexer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\projectindexer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:app.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\projectscanner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\projectscanner.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\richtextboxrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\richtextboxrenderer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\services\\syntaxhighlighter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:services\\syntaxhighlighter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\search\\keywordextractor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:search\\keywordextractor.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\src\\lavender.application\\chat\\promptbuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:src\\lavender.application\\chat\\promptbuilder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\todo.txt||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:todo.txt||{8B382828-6202-11D1-8870-0000F87579D2}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\headertoimageconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:headertoimageconverter.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|c:\\users\\nicks\\source\\repos\\lavender\\app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
-      "RelativeMoniker": "D:0:0:{8A478C2B-07D6-4FDC-BE22-07A1B6CD5F8E}|Lavender.csproj|solutionrelative:app.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     }
   ],
   "DocumentGroupContainers": [
@@ -90,225 +50,126 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 12,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "MainWindow.xaml",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\MainWindow.xaml",
-              "RelativeDocumentMoniker": "MainWindow.xaml",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\MainWindow.xaml",
-              "RelativeToolTip": "MainWindow.xaml",
+              "DocumentIndex": 0,
+              "Title": "SolutionLoader.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\FileSystem\\SolutionLoader.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.Infrastructure\\FileSystem\\SolutionLoader.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\FileSystem\\SolutionLoader.cs",
+              "RelativeToolTip": "src\\Lavender.Infrastructure\\FileSystem\\SolutionLoader.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-20T01:25:58.622Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "App.xaml",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.App\\App.xaml",
+              "RelativeDocumentMoniker": "src\\Lavender.App\\App.xaml",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.App\\App.xaml",
+              "RelativeToolTip": "src\\Lavender.App\\App.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-06-25T01:32:04.517Z",
-              "IsPinned": true,
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "ProjectIndexer.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\ProjectIndexer.cs",
-              "RelativeDocumentMoniker": "Services\\ProjectIndexer.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\ProjectIndexer.cs",
-              "RelativeToolTip": "Services\\ProjectIndexer.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAABcAAAA4AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-09T09:30:38.113Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "FastApiService.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\FastApiService.cs",
-              "RelativeDocumentMoniker": "Services\\FastApiService.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\FastApiService.cs",
-              "RelativeToolTip": "Services\\FastApiService.cs",
-              "ViewState": "AgIAAIcAAAAAAAAAAAAAAKQAAAAnAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-09T09:07:14.732Z",
+              "WhenOpened": "2026-07-20T00:51:25.757Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 4,
-              "Title": "CodeChunkService.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Chunking\\CodeChunkService.cs",
-              "RelativeDocumentMoniker": "Chunking\\CodeChunkService.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Chunking\\CodeChunkService.cs",
-              "RelativeToolTip": "Chunking\\CodeChunkService.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAABoAAAAAAAAAAAAAAA==",
+              "Title": "SymbolIndexingService.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\Indexing\\Symbol\\SymbolIndexingService.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.Infrastructure\\Indexing\\Symbol\\SymbolIndexingService.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\Indexing\\Symbol\\SymbolIndexingService.cs",
+              "RelativeToolTip": "src\\Lavender.Infrastructure\\Indexing\\Symbol\\SymbolIndexingService.cs",
+              "ViewState": "AgIAAPwAAAAAAAAAAAAAwBMBAAAOAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-09T06:29:34.533Z",
+              "WhenOpened": "2026-07-20T00:34:27.446Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "CodeChunkService.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\Indexing\\Chunking\\CodeChunkService.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.Infrastructure\\Indexing\\Chunking\\CodeChunkService.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\Indexing\\Chunking\\CodeChunkService.cs",
+              "RelativeToolTip": "src\\Lavender.Infrastructure\\Indexing\\Chunking\\CodeChunkService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-20T00:33:50.853Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ProjectIndexer.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\Indexing\\ProjectIndexer.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.Infrastructure\\Indexing\\ProjectIndexer.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Infrastructure\\Indexing\\ProjectIndexer.cs",
+              "RelativeToolTip": "src\\Lavender.Infrastructure\\Indexing\\ProjectIndexer.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-20T00:33:35.184Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "MainWindow.xaml.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.App\\MainWindow.xaml.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.App\\MainWindow.xaml.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.App\\MainWindow.xaml.cs",
+              "RelativeToolTip": "src\\Lavender.App\\MainWindow.xaml.cs",
+              "ViewState": "AgIAAKkAAAAAAAAAAAAAwLsAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-20T00:32:54.519Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "CodeChunk.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Chunking\\CodeChunk.cs",
-              "RelativeDocumentMoniker": "Chunking\\CodeChunk.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Chunking\\CodeChunk.cs",
-              "RelativeToolTip": "Chunking\\CodeChunk.cs",
-              "ViewState": "AgIAAEAAAAAAAAAAAAAcwGAAAAAsAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-09T06:29:25.689Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "ProjectScanner.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\ProjectScanner.cs",
-              "RelativeDocumentMoniker": "Services\\ProjectScanner.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\ProjectScanner.cs",
-              "RelativeToolTip": "Services\\ProjectScanner.cs",
-              "ViewState": "AgIAABQAAAAAAAAAAAAswCMAAAAzAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-29T18:08:05.669Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "OpenAIService.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\OpenAIService.cs",
-              "RelativeDocumentMoniker": "Services\\OpenAIService.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\OpenAIService.cs",
-              "RelativeToolTip": "Services\\OpenAIService.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAB4AAAArAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-25T02:46:01.274Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 18,
-              "Title": "AssemblyInfo.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\AssemblyInfo.cs",
-              "RelativeDocumentMoniker": "AssemblyInfo.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\AssemblyInfo.cs",
-              "RelativeToolTip": "AssemblyInfo.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-25T02:39:57.676Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 19,
-              "Title": "App.xaml",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\App.xaml",
-              "RelativeDocumentMoniker": "App.xaml",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\App.xaml",
-              "RelativeToolTip": "App.xaml",
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.App\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "src\\Lavender.App\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.App\\MainWindow.xaml",
+              "RelativeToolTip": "src\\Lavender.App\\MainWindow.xaml",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
-              "WhenOpened": "2026-06-25T01:33:16.23Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "App.xaml.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\App.xaml.cs",
-              "RelativeDocumentMoniker": "App.xaml.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\App.xaml.cs",
-              "RelativeToolTip": "App.xaml.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-25T01:33:13.758Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 13,
-              "Title": "RichTextBoxRenderer.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\RichTextBoxRenderer.cs",
-              "RelativeDocumentMoniker": "Services\\RichTextBoxRenderer.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\RichTextBoxRenderer.cs",
-              "RelativeToolTip": "Services\\RichTextBoxRenderer.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-27T23:45:51.964Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "PromptBuilder.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\PromptBuilder.cs",
-              "RelativeDocumentMoniker": "Services\\PromptBuilder.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\PromptBuilder.cs",
-              "RelativeToolTip": "Services\\PromptBuilder.cs",
-              "ViewState": "AgIAAGQAAAAAAAAAAAAcwGQAAAAhAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-27T20:33:52.749Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "MainWindow.xaml.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\MainWindow.xaml.cs",
-              "RelativeDocumentMoniker": "MainWindow.xaml.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\MainWindow.xaml.cs",
-              "RelativeToolTip": "MainWindow.xaml.cs",
-              "ViewState": "AgIAAEwAAAAAAAAAAAAMwF4AAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-25T01:32:02.436Z",
+              "WhenOpened": "2026-07-20T00:24:39.678Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 5,
-              "Title": "ProjectSearchService.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Search\\ProjectSearchService.cs",
-              "RelativeDocumentMoniker": "Search\\ProjectSearchService.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Search\\ProjectSearchService.cs",
-              "RelativeToolTip": "Search\\ProjectSearchService.cs",
-              "ViewState": "AgIAADkAAAAAAAAAAAAAAAoAAAAZAAAAAAAAAA==",
+              "Title": "CodeChunk.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Core\\DataTypes\\CodeChunk.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.Core\\DataTypes\\CodeChunk.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Core\\DataTypes\\CodeChunk.cs",
+              "RelativeToolTip": "src\\Lavender.Core\\DataTypes\\CodeChunk.cs",
+              "ViewState": "AgIAADwAAAAAAAAAAAAAAFQAAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T00:13:20.331Z",
+              "WhenOpened": "2026-07-20T00:24:00.824Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
-              "Title": "KeywordExtractor.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Search\\KeywordExtractor.cs",
-              "RelativeDocumentMoniker": "Search\\KeywordExtractor.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Search\\KeywordExtractor.cs",
-              "RelativeToolTip": "Search\\KeywordExtractor.cs",
-              "ViewState": "AgIAAKYAAAAAAAAAAAAAAGkAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T00:14:12.633Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 14,
-              "Title": "SyntaxHighlighter.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\SyntaxHighlighter.cs",
-              "RelativeDocumentMoniker": "Services\\SyntaxHighlighter.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\SyntaxHighlighter.cs",
-              "RelativeToolTip": "Services\\SyntaxHighlighter.cs",
-              "ViewState": "AgIAADYAAAAAAAAAAAAAACcAAABAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-27T23:02:04.259Z"
             },
             {
               "$type": "Document",
               "DocumentIndex": 8,
-              "Title": "SearchResult.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Search\\SearchResult.cs",
-              "RelativeDocumentMoniker": "Search\\SearchResult.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Search\\SearchResult.cs",
-              "RelativeToolTip": "Search\\SearchResult.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
+              "Title": "PromptBuilder.cs",
+              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Application\\Chat\\PromptBuilder.cs",
+              "RelativeDocumentMoniker": "src\\Lavender.Application\\Chat\\PromptBuilder.cs",
+              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\src\\Lavender.Application\\Chat\\PromptBuilder.cs",
+              "RelativeToolTip": "src\\Lavender.Application\\Chat\\PromptBuilder.cs",
+              "ViewState": "AgIAAG8AAAAAAAAAAAAAAH4AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-30T00:12:39.775Z",
+              "WhenOpened": "2026-07-20T00:23:56.919Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 9,
               "Title": "TODO.txt",
               "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\TODO.txt",
               "RelativeDocumentMoniker": "TODO.txt",
@@ -316,31 +177,7 @@
               "RelativeToolTip": "TODO.txt",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003109|",
-              "WhenOpened": "2026-06-29T17:37:31.445Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 17,
-              "Title": "HeaderToImageConverter.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\HeaderToImageConverter.cs",
-              "RelativeDocumentMoniker": "HeaderToImageConverter.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\HeaderToImageConverter.cs",
-              "RelativeToolTip": "HeaderToImageConverter.cs",
-              "ViewState": "AgIAAAIAAAAAAAAAAAAswBUAAAAsAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-25T21:34:40.503Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "FileParser.cs",
-              "DocumentMoniker": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\FileParser.cs",
-              "RelativeDocumentMoniker": "Services\\FileParser.cs",
-              "ToolTip": "C:\\Users\\nicks\\source\\repos\\Lavender\\Services\\FileParser.cs",
-              "RelativeToolTip": "Services\\FileParser.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAABUAAAAVAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-06-27T20:35:34.48Z",
+              "WhenOpened": "2026-06-29T17:37:31.445Z",
               "EditorCaption": ""
             }
           ]

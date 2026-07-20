@@ -21,10 +21,16 @@ namespace Lavender.Core.DataTypes
             Interface,
             Record,
             Enum,
+            Delegate,
             Method,
             Constructor,
+            Destructor,
+            Operator,
+            ConversionOperator,
             Property,
+            Indexer,
             Field,
+            EnumMember,
             Event
         }
 

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Lavender")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+09999fed82ef3a8dfc8cd94ebaf2524855dfa1b1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b5a8cb4d19d130c142f83146572d8b93874602ce")]
 [assembly: System.Reflection.AssemblyProductAttribute("Lavender")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Lavender")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,6 +1,7 @@
 using Lavender.Core.DataTypes;
 using Lavender.Infrastructure.Backend;
-using Lavender.Infrastructure.Chunking;
+using Lavender.Infrastructure.Indexing.Chunking;
+using Lavender.Infrastructure.Indexing.Symbol;
 
 namespace Lavender.Infrastructure.Indexing
 {
@@ -13,10 +14,13 @@ namespace Lavender.Infrastructure.Indexing
             fastApiService = FastApiService.Instance;
         }
 
-        public async Task IndexProjectAsync(string projectPath)
+        public async Task IndexProjectAsync(string projectPath, string solutionPath)
         {
             List<CodeChunk> chunks =
                 CodeChunkService.GetCodeChunksFromFolder(projectPath);
+
+            List<CodeSymbol> symbols =
+                await SymbolIndexingService.IndexProjectAsync(solutionPath);
 
             await fastApiService.EmbedProjectAsync(chunks);
         }

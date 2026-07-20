@@ -1,20 +1,24 @@
-﻿using System.Text;
+﻿using Lavender.App.Rendering;
+using Lavender.Application.Chat;
+using Lavender.Core.DataTypes;
+using Lavender.Infrastructure.AI;
+using Lavender.Infrastructure.Backend;
+using Lavender.Infrastructure.FileSystem;
+using Lavender.Infrastructure.Indexing;
+using Lavender.Infrastructure.Indexing.Symbol;
+using Lavender.Infrastructure.Retrieval;
+using Microsoft.Build.Locator;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.MSBuild;
+using Microsoft.Win32;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using Microsoft.Win32;
-using System.IO;
-using Lavender.App.Rendering;
-using Lavender.Application.Chat;
-using Lavender.Core.Chunking;
-using Lavender.Infrastructure.AI;
-using Lavender.Infrastructure.Backend;
-using Lavender.Infrastructure.FileSystem;
-using Lavender.Infrastructure.Indexing;
-using Lavender.Infrastructure.Retrieval;
 
 namespace Lavender.App
 {
@@ -101,7 +105,7 @@ namespace Lavender.App
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
 
-            VectorSearchCodeChunkObject ret = await FastApiService.Instance.SearchProjectAsync(input, 5);
+            VectorSearchCodeChunk_ObjectRecv ret = await FastApiService.Instance.SearchProjectAsync(input, 5);
 
             MessageBox.Show(ret.Results.Count.ToString());
             foreach (var chunk in ret.Results)
@@ -171,6 +175,15 @@ namespace Lavender.App
             if (dialog.ShowDialog() != true) { return; }
 
             string selectedPath = dialog.FolderName;
+            string SLNPath = "";
+            try
+            {
+                SLNPath = FindSolution(selectedPath);
+            } catch (InvalidOperationException err)
+            { 
+                Console.WriteLine(err);
+            }
+
             FolderView.Items.Clear();
 
             var rootItem = new TreeViewItem
@@ -181,16 +194,40 @@ namespace Lavender.App
 
             rootItem.Items.Add(null);
             rootItem.Expanded += Folder_Expanded;
-
             FolderView.Items.Add(rootItem);
+            rootItem.IsExpanded = true;
 
             _projectScanner = new ProjectScanner(selectedPath);
             _projectSearchService = new ProjectSearchService(_projectScanner);
 
-            rootItem.IsExpanded = true;
-
             // Were embedding project here for now
-            await _projectIndexer.IndexProjectAsync(selectedPath);
+            await _projectIndexer.IndexProjectAsync(selectedPath, SLNPath);
+        }
+
+        private static string FindSolution(string directory)
+        {
+            string? solutionPath = Directory
+                .EnumerateFiles(directory, "*.sln", SearchOption.TopDirectoryOnly)
+                .FirstOrDefault();
+
+            if (solutionPath is not null)
+            {
+                return solutionPath;
+            }
+
+            /*
+            string[] projectPaths = Directory
+                .EnumerateFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly)
+                .ToArray();
+
+            if (projectPaths.Length == 1)
+            {
+                return projectPaths[0];
+            }
+            */
+
+            throw new InvalidOperationException(
+                "The selected folder does not contain a solution or a single project file.");
         }
 
         /// <summary>
