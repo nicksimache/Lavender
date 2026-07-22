@@ -83,6 +83,7 @@ namespace Lavender.App
 
         protected override void OnClosed(EventArgs e)
         {
+            _projectIndexer.Dispose();
             FastApiService.Instance.StopServer();
             base.OnClosed(e);
         }

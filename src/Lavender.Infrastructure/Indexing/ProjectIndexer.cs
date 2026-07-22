@@ -1,28 +1,39 @@
 using Lavender.Core.DataTypes;
+using Lavender.Diagnostics;
+using Lavender.Git;
 using Lavender.Infrastructure.Backend;
 using Lavender.Infrastructure.Indexing.Chunking;
+using Lavender.Infrastructure.Indexing.Dependencies;
+using Lavender.Infrastructure.Indexing.Relationships;
 using Lavender.Infrastructure.Indexing.Symbol;
+using Lavender.Infrastructure.Knowledge;
+using Lavender.Infrastructure.Source;
 
-namespace Lavender.Infrastructure.Indexing
+namespace Lavender.Infrastructure.Indexing;
+
+/// <summary>Coordinates one shared Roslyn load and preserves the existing vector chunk indexing flow.</summary>
+public sealed class ProjectIndexer : IDisposable
 {
-    public class ProjectIndexer
+    private IndexedProjectContext? _context;
+    public ProjectKnowledgeService? KnowledgeService { get; private set; }
+
+    public async Task IndexProjectAsync(string projectPath, string solutionPath, CancellationToken cancellationToken = default)
     {
-        private readonly FastApiService fastApiService;
-
-        public ProjectIndexer()
+        List<CodeChunk> chunks = CodeChunkService.GetCodeChunksFromFolder(projectPath);
+        IndexedProjectContext newContext = await IndexedProjectContext.OpenAsync(solutionPath, cancellationToken);
+        try
         {
-            fastApiService = FastApiService.Instance;
+            var identity = new SymbolIdentityService();
+            SymbolIndex symbols = await new SymbolIndexingService(identity).IndexAsync(newContext, cancellationToken);
+            CodeRelationshipGraph relationships = await new CodeRelationshipIndexer(identity).IndexAsync(newContext, symbols, cancellationToken);
+            ProjectDependencyGraph dependencies = new ProjectDependencyIndexer().Index(newContext);
+            KnowledgeService = new ProjectKnowledgeService(symbols, new SymbolSourceService(symbols, newContext), relationships,
+                new RoslynDiagnosticsProvider(newContext, identity), new GitContextService(projectPath), dependencies);
+            IndexedProjectContext? old = _context; _context = newContext; old?.Dispose();
+            await FastApiService.Instance.EmbedProjectAsync(chunks);
         }
-
-        public async Task IndexProjectAsync(string projectPath, string solutionPath)
-        {
-            List<CodeChunk> chunks =
-                CodeChunkService.GetCodeChunksFromFolder(projectPath);
-
-            List<CodeSymbol> symbols =
-                await SymbolIndexingService.IndexProjectAsync(solutionPath);
-
-            await fastApiService.EmbedProjectAsync(chunks);
-        }
+        catch { newContext.Dispose(); throw; }
     }
+
+    public void Dispose() { _context?.Dispose(); _context = null; KnowledgeService = null; }
 }

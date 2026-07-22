@@ -42,6 +42,9 @@ namespace Lavender.Core.DataTypes
         public string ContainingType { get; set; } = "";
         public string Signature { get; set; } = "";
         public string FilePath { get; set; } = "";
+        public string RelativePath { get; set; } = "";
         public int StartLine { get; set; } = 0;
+        public int EndLine { get; set; } = 0;
+        public bool IsExternal { get; set; }
     }
 }
