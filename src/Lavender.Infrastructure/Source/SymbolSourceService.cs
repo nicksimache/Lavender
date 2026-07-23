@@ -27,7 +27,12 @@ public sealed class SymbolSourceService : ISymbolSourceService
 {
     private readonly SymbolIndex _index;
     private readonly IndexedProjectContext _context;
-    public SymbolSourceService(SymbolIndex index, IndexedProjectContext context) { _index = index; _context = context; }
+
+    public SymbolSourceService(SymbolIndex index, IndexedProjectContext context)
+    {
+        _index = index;
+        _context = context;
+    }
 
     public async Task<SymbolSourceResult?> GetSourceBySymbolIdAsync(string symbolId, CancellationToken cancellationToken = default) =>
         (await GetAllDeclarationsAsync(symbolId, cancellationToken)).FirstOrDefault();
@@ -35,7 +40,11 @@ public sealed class SymbolSourceService : ISymbolSourceService
     public async Task<IReadOnlyList<SymbolSourceResult>> GetAllDeclarationsAsync(string symbolId, CancellationToken cancellationToken = default)
     {
         ISymbol? symbol = _index.GetRoslynSymbol(symbolId);
-        if (symbol is null || symbol.DeclaringSyntaxReferences.Length == 0) return Array.Empty<SymbolSourceResult>();
+        if (symbol is null || symbol.DeclaringSyntaxReferences.Length == 0)
+        {
+            return Array.Empty<SymbolSourceResult>();
+        }
+
         var results = new List<SymbolSourceResult>();
         foreach (SyntaxReference reference in symbol.DeclaringSyntaxReferences)
         {
@@ -54,6 +63,7 @@ public sealed class SymbolSourceService : ISymbolSourceService
                 Signature = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
             });
         }
+
         return results;
     }
 }

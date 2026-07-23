@@ -99,7 +99,10 @@ namespace Lavender.Application.Chat
             foreach (var chunk in chunks)
             {
                 int similarity = 0;
-                if (chunk.Distance < 0) similarity = -1;
+                if (chunk.Distance < 0)
+                {
+                    similarity = -1;
+                }
 
                 res += $"""
                     ---------------------- Start of Chunk {i} ----------------------

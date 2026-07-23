@@ -3,7 +3,9 @@ using Microsoft.CodeAnalysis;
 
 namespace Lavender.Infrastructure.Indexing.Symbol;
 
-/// <summary>Read-only symbol metadata plus Roslyn symbols for authoritative source resolution.</summary>
+/// <summary>
+/// Read-only symbol metadata plus Roslyn symbols for authoritative source resolution.
+/// </summary>
 public sealed class SymbolIndex
 {
     private readonly Dictionary<string, ISymbol> _roslynSymbols = new(StringComparer.Ordinal);
@@ -21,7 +23,10 @@ public sealed class SymbolIndex
     public IReadOnlyList<CodeSymbol> Symbols => _symbols.Values.ToArray();
     public CodeSymbol? Get(string id) => _symbols.GetValueOrDefault(id);
     public ISymbol? GetRoslynSymbol(string id) => _roslynSymbols.GetValueOrDefault(id);
+
     public IReadOnlyList<CodeSymbol> Find(string query) => _symbols.Values
-        .Where(s => s.Name.Contains(query, StringComparison.OrdinalIgnoreCase) || s.FullyQualifiedName.Contains(query, StringComparison.OrdinalIgnoreCase))
+        .Where(s =>
+            s.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || s.FullyQualifiedName.Contains(query, StringComparison.OrdinalIgnoreCase))
         .ToArray();
 }

@@ -101,7 +101,10 @@ namespace Lavender.App
         {
             string input = UserInputBox.Text.Trim();
 
-            if (string.IsNullOrWhiteSpace(input)) return;
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                return;
+            }
 
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
@@ -173,7 +176,10 @@ namespace Lavender.App
                 Title = "Select a Unity Project"
             };
 
-            if (dialog.ShowDialog() != true) { return; }
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
 
             string selectedPath = dialog.FolderName;
             string solutionOrProjectPath;
@@ -257,7 +263,10 @@ namespace Lavender.App
         {
             var item = (TreeViewItem)sender;
 
-            if (item.Items.Count != 1 || item.Items[0] != null) return;
+            if (item.Items.Count != 1 || item.Items[0] != null)
+            {
+                return;
+            }
 
             item.Items.Clear();
 
@@ -346,20 +355,33 @@ namespace Lavender.App
         /// <returns></returns>
         public static string GetFileFolderName(string path)
         {
-            if (string.IsNullOrEmpty(path)) { return string.Empty; }
+            if (string.IsNullOrEmpty(path))
+            {
+                return string.Empty;
+            }
 
             var normalizedPath = path.Replace('/', '\\');
 
             var lastIndex = normalizedPath.LastIndexOf('\\');
-            if (lastIndex <= 0) { return path; }
+            if (lastIndex <= 0)
+            {
+                return path;
+            }
 
             return normalizedPath.Substring(lastIndex + 1);
         }
 
         private void FolderView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            if (e.NewValue is not TreeViewItem item) return;
-            if (item.Tag is not string path) return;
+            if (e.NewValue is not TreeViewItem item)
+            {
+                return;
+            }
+
+            if (item.Tag is not string path)
+            {
+                return;
+            }
 
             if (File.Exists(path) &&
                 Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))

@@ -11,7 +11,7 @@ using Lavender.Core.DataTypes;
 
 namespace Lavender.Infrastructure.Backend
 {
-    internal class FastApiService
+    public class FastApiService
     {
         private static FastApiService? _instance;
         private Process? _serverProcess;
@@ -20,7 +20,11 @@ namespace Lavender.Infrastructure.Backend
         {
             get
             {
-                if (_instance == null) _instance = new FastApiService();
+                if (_instance == null)
+                {
+                    _instance = new FastApiService();
+                }
+
                 return _instance;
             }
         }
@@ -48,7 +52,9 @@ namespace Lavender.Infrastructure.Backend
         public async Task StartServerAsync()
         {
             if (await IsServerRunningAsync())
+            {
                 return;
+            }
 
             string projectRoot = FindProjectRoot();
 
@@ -79,17 +85,23 @@ namespace Lavender.Infrastructure.Backend
             _serverProcess.OutputDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
+                {
                     Debug.WriteLine($"FastAPI: {e.Data}");
+                }
             };
 
             _serverProcess.ErrorDataReceived += (_, e) =>
             {
                 if (!string.IsNullOrWhiteSpace(e.Data))
+                {
                     Debug.WriteLine($"FastAPI ERROR: {e.Data}");
+                }
             };
 
             if (!_serverProcess.Start())
+            {
                 throw new InvalidOperationException("Could not start FastAPI.");
+            }
 
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
@@ -121,7 +133,9 @@ namespace Lavender.Infrastructure.Backend
                 }
 
                 if (await IsServerRunningAsync())
+                {
                     return;
+                }
 
                 await Task.Delay(500);
             }
@@ -137,7 +151,9 @@ namespace Lavender.Infrastructure.Backend
             while (directory != null)
             {
                 if (File.Exists(Path.Combine(directory.FullName, "Lavender.sln")))
+                {
                     return directory.FullName;
+                }
 
                 directory = directory.Parent;
             }
@@ -177,7 +193,9 @@ namespace Lavender.Infrastructure.Backend
                 await response.Content.ReadFromJsonAsync<VectorSearchCodeChunk_ObjectRecv>();
 
             if (searchResponse == null)
+            {
                 throw new Exception("Search returned no data.");
+            }
 
             return searchResponse;
         }

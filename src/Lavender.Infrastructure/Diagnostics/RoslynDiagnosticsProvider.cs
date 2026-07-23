@@ -24,12 +24,22 @@ public sealed class RoslynDiagnosticsProvider
 {
     private readonly IndexedProjectContext _context;
     private readonly SymbolIdentityService _identity;
-    public RoslynDiagnosticsProvider(IndexedProjectContext context, SymbolIdentityService identity) { _context = context; _identity = identity; }
+
+    public RoslynDiagnosticsProvider(IndexedProjectContext context, SymbolIdentityService identity)
+    {
+        _context = context;
+        _identity = identity;
+    }
 
     public async Task<IReadOnlyList<ProjectDiagnostic>> GetSolutionDiagnosticsAsync(CancellationToken cancellationToken = default)
     {
         var result = new List<ProjectDiagnostic>();
-        foreach (Project project in _context.Solution.Projects) result.AddRange(await GetProjectAsync(project, cancellationToken));
+
+        foreach (Project project in _context.Solution.Projects)
+        {
+            result.AddRange(await GetProjectAsync(project, cancellationToken));
+        }
+
         return result;
     }
 
@@ -49,7 +59,11 @@ public sealed class RoslynDiagnosticsProvider
     private async Task<IReadOnlyList<ProjectDiagnostic>> GetProjectAsync(Project project, CancellationToken token)
     {
         Compilation? compilation = await project.GetCompilationAsync(token);
-        if (compilation is null) return Array.Empty<ProjectDiagnostic>();
+        if (compilation is null)
+        {
+            return Array.Empty<ProjectDiagnostic>();
+        }
+
         var result = new List<ProjectDiagnostic>();
         foreach (Diagnostic diagnostic in compilation.GetDiagnostics(token))
         {
@@ -66,11 +80,19 @@ public sealed class RoslynDiagnosticsProvider
                 foreach (SyntaxNode candidate in node.AncestorsAndSelf())
                 {
                     symbol = model.GetDeclaredSymbol(candidate, token);
-                    if (symbol is not null) break;
+                    if (symbol is not null)
+                    {
+                        break;
+                    }
                 }
+
                 symbol ??= model.GetEnclosingSymbol(location.SourceSpan.Start, token);
-                if (symbol is not null) symbolId = _identity.GetId(symbol);
+                if (symbol is not null)
+                {
+                    symbolId = _identity.GetId(symbol);
+                }
             }
+
             result.Add(new ProjectDiagnostic
             {
                 Id = diagnostic.Id,
@@ -86,6 +108,7 @@ public sealed class RoslynDiagnosticsProvider
                 ProjectName = project.Name
             });
         }
+
         return result;
     }
 }

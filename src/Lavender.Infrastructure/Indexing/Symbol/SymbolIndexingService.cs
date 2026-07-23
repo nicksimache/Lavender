@@ -4,11 +4,17 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Lavender.Infrastructure.Indexing.Symbol;
 
-/// <summary>Builds symbol metadata from an already loaded Roslyn solution.</summary>
+/// <summary>
+/// Builds symbol metadata from an already loaded Roslyn solution.
+/// </summary>
 public sealed class SymbolIndexingService
 {
     private readonly SymbolIdentityService _identity;
-    public SymbolIndexingService(SymbolIdentityService identity) => _identity = identity;
+
+    public SymbolIndexingService(SymbolIdentityService identity)
+    {
+        _identity = identity;
+    }
 
     public async Task<SymbolIndex> IndexAsync(IndexedProjectContext context, CancellationToken cancellationToken = default)
     {
@@ -16,34 +22,60 @@ public sealed class SymbolIndexingService
         foreach (Project project in context.Solution.Projects)
         {
             Compilation? compilation = await project.GetCompilationAsync(cancellationToken);
-            if (compilation is null) continue;
+            if (compilation is null)
+            {
+                continue;
+            }
+
             string projectDirectory = Path.GetDirectoryName(project.FilePath ?? context.InputPath) ?? context.RootDirectory;
             foreach (Document document in project.Documents)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 SyntaxNode? root = await document.GetSyntaxRootAsync(cancellationToken);
                 SyntaxTree? tree = await document.GetSyntaxTreeAsync(cancellationToken);
-                if (root is null || tree is null) continue;
+                if (root is null || tree is null)
+                {
+                    continue;
+                }
+
                 SemanticModel model = compilation.GetSemanticModel(tree);
                 string absolutePath = Path.GetFullPath(document.FilePath ?? Path.Combine(projectDirectory, document.Name));
                 string relativePath = NormalizePath(Path.GetRelativePath(context.RootDirectory, absolutePath));
                 foreach (SyntaxNode declaration in GetDeclarations(root))
                 {
                     ISymbol? symbol = GetDeclaredSymbol(model, declaration, cancellationToken);
-                    if (symbol is null) continue;
+                    if (symbol is null)
+                    {
+                        continue;
+                    }
+
                     entries.Add((CreateModel(symbol, declaration, absolutePath, relativePath), symbol));
                 }
             }
         }
+
         return new SymbolIndex(entries);
     }
 
     private static IEnumerable<SyntaxNode> GetDeclarations(SyntaxNode root)
     {
-        foreach (MemberDeclarationSyntax member in root.DescendantNodes().OfType<MemberDeclarationSyntax>()) yield return member;
+        foreach (MemberDeclarationSyntax member in root.DescendantNodes().OfType<MemberDeclarationSyntax>())
+        {
+            yield return member;
+        }
+
         foreach (VariableDeclaratorSyntax variable in root.DescendantNodes().OfType<VariableDeclaratorSyntax>())
-            if (variable.Parent?.Parent is BaseFieldDeclarationSyntax) yield return variable;
-        foreach (EnumMemberDeclarationSyntax member in root.DescendantNodes().OfType<EnumMemberDeclarationSyntax>()) yield return member;
+        {
+            if (variable.Parent?.Parent is BaseFieldDeclarationSyntax)
+            {
+                yield return variable;
+            }
+        }
+
+        foreach (EnumMemberDeclarationSyntax member in root.DescendantNodes().OfType<EnumMemberDeclarationSyntax>())
+        {
+            yield return member;
+        }
     }
 
     private static ISymbol? GetDeclaredSymbol(SemanticModel model, SyntaxNode node, CancellationToken token) => node switch

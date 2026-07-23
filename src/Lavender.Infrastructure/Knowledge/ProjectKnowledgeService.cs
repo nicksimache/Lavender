@@ -25,10 +25,29 @@ public interface IProjectKnowledgeService
 /// <summary>Small read-only facade intended for a future controlled AI tool layer.</summary>
 public sealed class ProjectKnowledgeService : IProjectKnowledgeService
 {
-    private readonly SymbolIndex _symbols; private readonly ISymbolSourceService _source; private readonly CodeRelationshipGraph _relationships;
-    private readonly RoslynDiagnosticsProvider _diagnostics; private readonly GitContextService _git; private readonly ProjectDependencyGraph _dependencies;
-    public ProjectKnowledgeService(SymbolIndex symbols, ISymbolSourceService source, CodeRelationshipGraph relationships, RoslynDiagnosticsProvider diagnostics, GitContextService git, ProjectDependencyGraph dependencies)
-    { _symbols = symbols; _source = source; _relationships = relationships; _diagnostics = diagnostics; _git = git; _dependencies = dependencies; }
+    private readonly SymbolIndex _symbols;
+    private readonly ISymbolSourceService _source;
+    private readonly CodeRelationshipGraph _relationships;
+    private readonly RoslynDiagnosticsProvider _diagnostics;
+    private readonly GitContextService _git;
+    private readonly ProjectDependencyGraph _dependencies;
+
+    public ProjectKnowledgeService(
+        SymbolIndex symbols,
+        ISymbolSourceService source,
+        CodeRelationshipGraph relationships,
+        RoslynDiagnosticsProvider diagnostics,
+        GitContextService git,
+        ProjectDependencyGraph dependencies)
+    {
+        _symbols = symbols;
+        _source = source;
+        _relationships = relationships;
+        _diagnostics = diagnostics;
+        _git = git;
+        _dependencies = dependencies;
+    }
+
     public IReadOnlyList<CodeSymbol> FindSymbols(string query) => _symbols.Find(query);
     public Task<SymbolSourceResult?> GetSymbolSourceAsync(string id, CancellationToken token = default) => _source.GetSourceBySymbolIdAsync(id, token);
     public Task<IReadOnlyList<SymbolSourceResult>> GetAllSymbolDeclarationsAsync(string id, CancellationToken token = default) => _source.GetAllDeclarationsAsync(id, token);

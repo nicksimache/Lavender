@@ -118,7 +118,10 @@ namespace Lavender.Infrastructure.Retrieval
 
             foreach (char c in prompt)
             {
-                if (c == '_' || !char.IsPunctuation(c)) { sb.Append(c); }
+                if (c == '_' || !char.IsPunctuation(c))
+                {
+                    sb.Append(c);
+                }
             }
 
             return sb.ToString()
@@ -160,7 +163,6 @@ namespace Lavender.Infrastructure.Retrieval
                 {
                     result.Add(word[lastToken..]);
                 }
-
             }
 
             return result;
