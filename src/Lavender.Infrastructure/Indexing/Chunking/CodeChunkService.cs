@@ -23,7 +23,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                          "*.cs",
                          SearchOption.AllDirectories))
             {
-                codeChunks.AddRange(GetCodeChunks(file));    
+                codeChunks.AddRange(GetCodeChunks(file));
             }
 
             return codeChunks;

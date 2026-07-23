@@ -27,6 +27,8 @@ public sealed class IndexedProjectContext : IDisposable
 
     public static async Task<IndexedProjectContext> OpenAsync(string solutionOrProjectPath, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(solutionOrProjectPath);
+
         if (!MSBuildLocator.IsRegistered) MSBuildLocator.RegisterDefaults();
         var warnings = new List<string>();
         var workspace = MSBuildWorkspace.Create();

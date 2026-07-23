@@ -42,11 +42,17 @@ public sealed class SymbolSourceService : ISymbolSourceService
             SyntaxNode node = await reference.GetSyntaxAsync(cancellationToken);
             FileLinePositionSpan span = node.SyntaxTree.GetLineSpan(node.Span, cancellationToken);
             string filePath = Path.GetFullPath(node.SyntaxTree.FilePath);
-            results.Add(new SymbolSourceResult { SymbolId = symbolId, FilePath = filePath,
+            results.Add(new SymbolSourceResult
+            {
+                SymbolId = symbolId,
+                FilePath = filePath,
                 RelativePath = Path.GetRelativePath(_context.RootDirectory, filePath).Replace('\\', '/'),
-                StartLine = span.StartLinePosition.Line + 1, EndLine = span.EndLinePosition.Line + 1,
-                SourceCode = node.ToFullString(), DisplayName = symbol.ToDisplayString(SymbolIdentityService.IdentityFormat),
-                Signature = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat) });
+                StartLine = span.StartLinePosition.Line + 1,
+                EndLine = span.EndLinePosition.Line + 1,
+                SourceCode = node.ToFullString(),
+                DisplayName = symbol.ToDisplayString(SymbolIdentityService.IdentityFormat),
+                Signature = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)
+            });
         }
         return results;
     }

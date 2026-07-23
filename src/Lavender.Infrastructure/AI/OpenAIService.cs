@@ -11,7 +11,7 @@ namespace Lavender.Infrastructure.AI
     public class OpenAIService
     {
         private readonly ChatClient _client;
-        
+
         /// <summary>
         /// Default constructor
         /// </summary>

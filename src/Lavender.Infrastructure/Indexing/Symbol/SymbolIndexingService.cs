@@ -63,14 +63,17 @@ public sealed class SymbolIndexingService
         FileLinePositionSpan span = declaration.SyntaxTree.GetLineSpan(declaration.Span);
         return new CodeSymbol
         {
-            Id = _identity.GetId(symbol), Name = symbol.Name,
+            Id = _identity.GetId(symbol),
+            Name = symbol.Name,
             FullyQualifiedName = _identity.GetDisplayName(symbol),
             SymbolType = GetSymbolType(symbol),
             Namespace = symbol.ContainingNamespace is { IsGlobalNamespace: false } ns ? ns.ToDisplayString() : "",
             ContainingType = symbol.ContainingType?.ToDisplayString() ?? "",
             Signature = symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
-            FilePath = filePath, RelativePath = relativePath,
-            StartLine = span.StartLinePosition.Line + 1, EndLine = span.EndLinePosition.Line + 1
+            FilePath = filePath,
+            RelativePath = relativePath,
+            StartLine = span.StartLinePosition.Line + 1,
+            EndLine = span.EndLinePosition.Line + 1
         };
     }
 

@@ -19,6 +19,22 @@ public sealed class ProjectIndexer : IDisposable
 
     public async Task IndexProjectAsync(string projectPath, string solutionPath, CancellationToken cancellationToken = default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
+
+        if (!Directory.Exists(projectPath))
+        {
+            throw new DirectoryNotFoundException(
+                $"The selected project directory does not exist: {projectPath}");
+        }
+
+        if (!File.Exists(solutionPath))
+        {
+            throw new FileNotFoundException(
+                "The selected solution or project file does not exist.",
+                solutionPath);
+        }
+
         List<CodeChunk> chunks = CodeChunkService.GetCodeChunksFromFolder(projectPath);
         IndexedProjectContext newContext = await IndexedProjectContext.OpenAsync(solutionPath, cancellationToken);
         try

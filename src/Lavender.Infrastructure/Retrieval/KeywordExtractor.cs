@@ -147,7 +147,7 @@ namespace Lavender.Infrastructure.Retrieval
                     {
                         result.Add(word[lastToken..i]);
                         lastToken = i;
-                    } 
+                    }
                     else if (word[i] == '_')
                     {
                         result.Add(word[lastToken..i]);

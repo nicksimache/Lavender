@@ -1,5 +1,5 @@
 ﻿Lavender
-
+1.0.0.0
 
 winexe
 C#
@@ -12,9 +12,9 @@ TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR
 C:\Users\nicks\source\repos\Lavender\src\Lavender.App\App.xaml
 11425318212
 231827369862
-33-1134633650
+35-718678466
 228-501780847
 src\Lavender.App\MainWindow.xaml;
 
-False
+True
 

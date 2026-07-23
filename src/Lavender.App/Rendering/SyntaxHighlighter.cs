@@ -25,7 +25,7 @@ namespace Lavender.App.Rendering
             var spans = new List<CodeSpan>();
             int i = 0;
 
-            while (i < code.Length) 
+            while (i < code.Length)
             {
                 char current = code[i];
 
@@ -39,7 +39,7 @@ namespace Lavender.App.Rendering
                     string comment = ReadBlockComment(code, ref i);
                     spans.Add(new CodeSpan(comment, "#6A9955"));
                 }
-                else if(StartsWithLiteral(code, i))
+                else if (StartsWithLiteral(code, i))
                 {
                     string str = ReadLiteral(code, ref i);
                     spans.Add(new CodeSpan(str, "#CE9178"));

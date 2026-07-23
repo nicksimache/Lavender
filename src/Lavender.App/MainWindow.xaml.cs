@@ -176,13 +176,19 @@ namespace Lavender.App
             if (dialog.ShowDialog() != true) { return; }
 
             string selectedPath = dialog.FolderName;
-            string SLNPath = "";
+            string solutionOrProjectPath;
             try
             {
-                SLNPath = FindSolution(selectedPath);
-            } catch (InvalidOperationException err)
-            { 
-                Console.WriteLine(err);
+                solutionOrProjectPath = FindSolution(selectedPath);
+            }
+            catch (InvalidOperationException err)
+            {
+                MessageBox.Show(
+                    err.Message,
+                    "Unable to open project",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
             }
 
             FolderView.Items.Clear();
@@ -201,8 +207,21 @@ namespace Lavender.App
             _projectScanner = new ProjectScanner(selectedPath);
             _projectSearchService = new ProjectSearchService(_projectScanner);
 
-            // Were embedding project here for now
-            await _projectIndexer.IndexProjectAsync(selectedPath, SLNPath);
+            try
+            {
+                // We're embedding the project here for now.
+                await _projectIndexer.IndexProjectAsync(
+                    selectedPath,
+                    solutionOrProjectPath);
+            }
+            catch (Exception err)
+            {
+                MessageBox.Show(
+                    $"Lavender could not index the selected project.{Environment.NewLine}{Environment.NewLine}{err.Message}",
+                    "Project indexing failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
         }
 
         private static string FindSolution(string directory)
@@ -216,7 +235,6 @@ namespace Lavender.App
                 return solutionPath;
             }
 
-            /*
             string[] projectPaths = Directory
                 .EnumerateFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly)
                 .ToArray();
@@ -225,7 +243,6 @@ namespace Lavender.App
             {
                 return projectPaths[0];
             }
-            */
 
             throw new InvalidOperationException(
                 "The selected folder does not contain a solution or a single project file.");
@@ -254,9 +271,9 @@ namespace Lavender.App
             {
                 var dirs = Directory.GetDirectories(fullPath);
 
-                if(dirs.Length > 0)
+                if (dirs.Length > 0)
                 {
-                    foreach(var d in dirs)
+                    foreach (var d in dirs)
                     {
                         if (!ProjectScanner.ShouldIgnoreFolder(d))
                         {
@@ -292,9 +309,9 @@ namespace Lavender.App
             {
                 var fs = Directory.GetFiles(fullPath);
 
-                if (fs.Length > 0) 
+                if (fs.Length > 0)
                 {
-                    foreach(var f in fs)
+                    foreach (var f in fs)
                     {
                         if (!ProjectScanner.ShouldIgnoreFile(f))
                         {
@@ -334,9 +351,9 @@ namespace Lavender.App
             var normalizedPath = path.Replace('/', '\\');
 
             var lastIndex = normalizedPath.LastIndexOf('\\');
-            if(lastIndex <= 0) { return path; }
+            if (lastIndex <= 0) { return path; }
 
-            return normalizedPath.Substring(lastIndex+1);
+            return normalizedPath.Substring(lastIndex + 1);
         }
 
         private void FolderView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)

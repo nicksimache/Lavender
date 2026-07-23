@@ -71,11 +71,20 @@ public sealed class RoslynDiagnosticsProvider
                 symbol ??= model.GetEnclosingSymbol(location.SourceSpan.Start, token);
                 if (symbol is not null) symbolId = _identity.GetId(symbol);
             }
-            result.Add(new ProjectDiagnostic { Id = diagnostic.Id, Message = diagnostic.GetMessage(), Category = diagnostic.Descriptor.Category,
-                Severity = diagnostic.Severity.ToString(), FilePath = line?.Path,
-                StartLine = line?.StartLinePosition.Line + 1, StartColumn = line?.StartLinePosition.Character + 1,
-                EndLine = line?.EndLinePosition.Line + 1, EndColumn = line?.EndLinePosition.Character + 1,
-                SymbolId = symbolId, ProjectName = project.Name });
+            result.Add(new ProjectDiagnostic
+            {
+                Id = diagnostic.Id,
+                Message = diagnostic.GetMessage(),
+                Category = diagnostic.Descriptor.Category,
+                Severity = diagnostic.Severity.ToString(),
+                FilePath = line?.Path,
+                StartLine = line?.StartLinePosition.Line + 1,
+                StartColumn = line?.StartLinePosition.Character + 1,
+                EndLine = line?.EndLinePosition.Line + 1,
+                EndColumn = line?.EndLinePosition.Character + 1,
+                SymbolId = symbolId,
+                ProjectName = project.Name
+            });
         }
         return result;
     }

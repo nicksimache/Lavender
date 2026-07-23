@@ -91,9 +91,17 @@ public sealed class CodeRelationshipIndexer
         var position = location.SyntaxTree.GetLineSpan(location.Span).StartLinePosition;
         string key = retainLocations ? $"{sourceId}|{targetId}|{type}|{path}|{location.SpanStart}" : $"{sourceId}|{targetId}|{type}";
         if (!seen.Add(key) || sourceId == targetId && type == CodeRelationshipType.UsesType) return;
-        output.Add(new CodeRelationship { SourceSymbolId = sourceId, TargetSymbolId = targetId, RelationshipType = type,
-            FilePath = path, StartLine = position.Line + 1, StartColumn = position.Character + 1,
-            SourceDisplayName = _identity.GetDisplayName(source), TargetDisplayName = _identity.GetDisplayName(target),
-            IsTargetExternal = !internalIds.Contains(targetId) });
+        output.Add(new CodeRelationship
+        {
+            SourceSymbolId = sourceId,
+            TargetSymbolId = targetId,
+            RelationshipType = type,
+            FilePath = path,
+            StartLine = position.Line + 1,
+            StartColumn = position.Character + 1,
+            SourceDisplayName = _identity.GetDisplayName(source),
+            TargetDisplayName = _identity.GetDisplayName(target),
+            IsTargetExternal = !internalIds.Contains(targetId)
+        });
     }
 }

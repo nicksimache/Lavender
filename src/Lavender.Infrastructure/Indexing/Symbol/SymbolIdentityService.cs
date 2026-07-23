@@ -4,7 +4,9 @@ using System.Text;
 
 namespace Lavender.Infrastructure.Indexing.Symbol;
 
-/// <summary>Creates the canonical symbol IDs used by every Lavender index.</summary>
+/// <summary>
+/// Creates the canonical symbol IDs used by every Lavender index.
+/// </summary>
 public sealed class SymbolIdentityService
 {
     public static readonly SymbolDisplayFormat IdentityFormat = new(

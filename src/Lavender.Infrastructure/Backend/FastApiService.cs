@@ -16,13 +16,13 @@ namespace Lavender.Infrastructure.Backend
         private static FastApiService? _instance;
         private Process? _serverProcess;
 
-        public static FastApiService Instance 
-        { 
-            get 
-            { 
-                if(_instance == null) _instance = new FastApiService();
-                return _instance; 
-            } 
+        public static FastApiService Instance
+        {
+            get
+            {
+                if (_instance == null) _instance = new FastApiService();
+                return _instance;
+            }
         }
 
         #region HTTPClient
