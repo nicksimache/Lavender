@@ -1,18 +1,17 @@
 ﻿using Lavender.App.Rendering;
-using Lavender.Application.Chat;
-using Lavender.Core.DataTypes;
+using Lavender.Application.Agent;
 using Lavender.Infrastructure.AI;
 using Lavender.Infrastructure.Backend;
 using Lavender.Infrastructure.FileSystem;
 using Lavender.Infrastructure.Indexing;
 using Lavender.Infrastructure.Indexing.Symbol;
+using Lavender.Infrastructure.Mcp;
 using Lavender.Infrastructure.Retrieval;
 using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 using Microsoft.Win32;
 using System.IO;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -29,15 +28,18 @@ namespace Lavender.App
     {
         private bool isHighlighting = false;
         private string? currSelectedFile;
+        private string? _selectedProjectPath;
+        private string? _selectedSolutionPath;
 
         // nullable services since they require project dir as constructor fields
         private ProjectScanner? _projectScanner;
         private ProjectSearchService? _projectSearchService;
 
 
-        private readonly OpenAIService _openAIService;
-        private readonly PromptBuilder _promptBuilder;
+        private readonly AgentRunner _agentRunner;
+        private readonly LavenderMcpClient _mcpClient;
         private readonly ProjectIndexer _projectIndexer;
+        private Guid _activeConversationId;
         private readonly List<string> contextFiles = new();
 
         #region Constructor
@@ -48,10 +50,16 @@ namespace Lavender.App
         {
             InitializeComponent();
 
-            _openAIService = new OpenAIService();
-
-            var fileParser = new FileParser();
-            _promptBuilder = new PromptBuilder(fileParser);
+            AgentSettings settings = AgentSettings.Load();
+            settings.Validate();
+            _mcpClient = new LavenderMcpClient(FindRepositoryRoot());
+            JsonConversationStore conversations = new(settings.HistoryDirectory);
+            OpenAIService model = new(settings.Model);
+            _agentRunner = new AgentRunner(
+                settings,
+                model,
+                _mcpClient,
+                conversations);
 
             _projectIndexer = new ProjectIndexer();
 
@@ -66,6 +74,9 @@ namespace Lavender.App
         private async Task InitializeAsync()
         {
             await FastApiService.Instance.StartServerAsync();
+            await _mcpClient.ConnectAsync();
+            Conversation conversation = await _agentRunner.CreateConversationAsync();
+            _activeConversationId = conversation.Id;
         }
 
         #endregion
@@ -84,6 +95,7 @@ namespace Lavender.App
         protected override void OnClosed(EventArgs e)
         {
             _projectIndexer.Dispose();
+            _mcpClient.DisposeAsync().AsTask().GetAwaiter().GetResult();
             FastApiService.Instance.StopServer();
             base.OnClosed(e);
         }
@@ -109,20 +121,13 @@ namespace Lavender.App
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
 
-            VectorSearchCodeChunk_ObjectRecv ret = await FastApiService.Instance.SearchProjectAsync(input, 5);
-
-            MessageBox.Show(ret.Results.Count.ToString());
-            foreach (var chunk in ret.Results)
-            {
-                Console.WriteLine(chunk);
-            }
-
-            string userPrompt = _promptBuilder.PromptOnFileContext(contextFiles, ret.Results, input);
-
             try
             {
-                string aiResponse = await _openAIService.AskAsync(userPrompt);
-                AddMessageBubble(aiResponse, false);
+                AgentRunResult result = await _agentRunner.RunAsync(
+                    _activeConversationId,
+                    input,
+                    BuildProjectContext());
+                AddMessageBubble(result.FinalAnswer, false);
             }
             catch (Exception ex)
             {
@@ -212,11 +217,16 @@ namespace Lavender.App
 
             _projectScanner = new ProjectScanner(selectedPath);
             _projectSearchService = new ProjectSearchService(_projectScanner);
+            _selectedProjectPath = selectedPath;
+            _selectedSolutionPath = solutionOrProjectPath;
 
             try
             {
                 // We're embedding the project here for now.
                 await _projectIndexer.IndexProjectAsync(
+                    selectedPath,
+                    solutionOrProjectPath);
+                await _mcpClient.IndexProjectAsync(
                     selectedPath,
                     solutionOrProjectPath);
             }
@@ -252,6 +262,46 @@ namespace Lavender.App
 
             throw new InvalidOperationException(
                 "The selected folder does not contain a solution or a single project file.");
+        }
+
+        private string BuildProjectContext()
+        {
+            if (_selectedProjectPath is null || _selectedSolutionPath is null)
+            {
+                return "No project is selected. Ask the user to open a project before code analysis.";
+            }
+
+            string selectedFiles = contextFiles.Count == 0
+                ? "None"
+                : string.Join(Environment.NewLine, contextFiles);
+
+            return $"""
+                Project root: {_selectedProjectPath}
+                Solution or project: {_selectedSolutionPath}
+                User-selected context files:
+                {selectedFiles}
+                """;
+        }
+
+        private static string FindRepositoryRoot()
+        {
+            DirectoryInfo? directory = new(AppContext.BaseDirectory);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "Lavender.sln")))
+                {
+                    return directory.FullName;
+                }
+                directory = directory.Parent;
+            }
+
+            if (File.Exists(Path.Combine(Environment.CurrentDirectory, "Lavender.sln")))
+            {
+                return Environment.CurrentDirectory;
+            }
+
+            throw new DirectoryNotFoundException(
+                "Could not locate the Lavender repository root.");
         }
 
         /// <summary>

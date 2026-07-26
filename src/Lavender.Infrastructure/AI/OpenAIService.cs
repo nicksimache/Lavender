@@ -1,38 +1,38 @@
-﻿using OpenAI.Chat;
-using OpenAI.Responses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Lavender.Infrastructure.Mcp;
+using OpenAI.Chat;
+using System.ClientModel;
 
-namespace Lavender.Infrastructure.AI
+namespace Lavender.Infrastructure.AI;
+
+public sealed class OpenAIService
 {
-    public class OpenAIService
+    private readonly ChatClient _client;
+
+    public OpenAIService(string model)
     {
-        private readonly ChatClient _client;
+        string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY")
+            ?? throw new InvalidOperationException("Missing OPENAI_API_KEY");
+        _client = new ChatClient(model, apiKey);
+    }
 
-        /// <summary>
-        /// Default constructor
-        /// </summary>
-        /// <exception cref="Exception"></exception>
-        public OpenAIService()
+    public ChatCompletionOptions CreateToolOptions(IReadOnlyList<McpToolDefinition> tools)
+    {
+        ChatCompletionOptions options = new();
+        foreach (McpToolDefinition tool in tools)
         {
-            string apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("Missing OPENAI_API_KEY");
-
-            _client = new(model: "gpt-4.1-mini", apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY"));
+            options.Tools.Add(ChatTool.CreateFunctionTool(
+                tool.Name, tool.Description, tool.JsonSchema));
         }
+        return options;
+    }
 
-        /// <summary>
-        /// Returns AI response based on user input
-        /// </summary>
-        /// <param name="userPrompt"></param>
-        /// <returns></returns>
-        public async Task<string> AskAsync(string userPrompt)
-        {
-            ChatCompletion completion = await _client.CompleteChatAsync(userPrompt);
-
-            return completion.Content[0].Text ?? "Error: Unable to generate response, please try again later";
-        }
+    public async Task<ChatCompletion> CompleteAsync(
+        IEnumerable<ChatMessage> messages,
+        ChatCompletionOptions options,
+        CancellationToken cancellationToken = default)
+    {
+        ClientResult<ChatCompletion> result = await _client.CompleteChatAsync(
+            messages, options, cancellationToken);
+        return result.Value;
     }
 }

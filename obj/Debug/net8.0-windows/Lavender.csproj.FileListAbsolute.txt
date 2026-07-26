@@ -216,3 +216,8 @@ C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\tr\Microsoft.CodeA
 C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\nicks\source\repos\Lavender\obj\Debug\net8.0-windows\src\Lavender.App\MainWindow.baml
+C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\appsettings.json
+C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\Microsoft.Extensions.AI.Abstractions.dll
+C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\Microsoft.Extensions.Caching.Abstractions.dll
+C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\ModelContextProtocol.dll
+C:\Users\nicks\source\repos\Lavender\bin\Debug\net8.0-windows\ModelContextProtocol.Core.dll
