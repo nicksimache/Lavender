@@ -141,21 +141,26 @@ namespace Lavender.App
             Border bubble = new Border
             {
                 Background = isUser
-                ? new SolidColorBrush(Color.FromRgb(124, 58, 237))
-                : new SolidColorBrush(Color.FromRgb(31, 41, 55)),
+                ? new SolidColorBrush(Color.FromRgb(76, 58, 105))
+                : new SolidColorBrush(Color.FromRgb(42, 42, 42)),
 
-                CornerRadius = new CornerRadius(14),
-                Padding = new Thickness(16),
+                BorderBrush = isUser
+                ? new SolidColorBrush(Color.FromRgb(118, 83, 181))
+                : new SolidColorBrush(Color.FromRgb(58, 58, 58)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(11, 8, 11, 8),
                 Margin = isUser
-                ? new Thickness(120, 0, 0, 16)
-                : new Thickness(0, 0, 120, 16),
+                ? new Thickness(48, 0, 0, 10)
+                : new Thickness(0, 0, 28, 10),
             };
 
             TextBlock text = new TextBlock
             {
                 Text = message,
-                Foreground = Brushes.White,
-                FontSize = 15,
+                Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
+                FontFamily = new FontFamily("Bahnschrift"),
+                FontSize = 12,
                 TextWrapping = TextWrapping.Wrap
             };
 
