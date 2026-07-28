@@ -1,7 +1,7 @@
 {
-  "version": 3,
+  "version": 4,
   "targets": {
-    "net8.0-windows7.0": {
+    "net8.0-windows": {
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
@@ -2590,7 +2590,7 @@
     }
   },
   "projectFileDependencyGroups": {
-    "net8.0-windows7.0": [
+    "net8.0-windows": [
       "Microsoft.Build.Framework >= 17.11.48",
       "Microsoft.Build.Locator >= 1.11.2",
       "Microsoft.CodeAnalysis.CSharp >= 5.6.0",
@@ -2601,19 +2601,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\nicks\\.nuget\\packages\\": {}
+    "C:\\Users\\nsima\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\nicks\\source\\repos\\Lavender\\Lavender.csproj",
+      "projectUniqueName": "C:\\Users\\nsima\\OneDrive - VertiGIS\\Documents\\temp\\Lavender\\Lavender.csproj",
       "projectName": "Lavender",
-      "projectPath": "C:\\Users\\nicks\\source\\repos\\Lavender\\Lavender.csproj",
-      "packagesPath": "C:\\Users\\nicks\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\nicks\\source\\repos\\Lavender\\obj\\",
+      "projectPath": "C:\\Users\\nsima\\OneDrive - VertiGIS\\Documents\\temp\\Lavender\\Lavender.csproj",
+      "packagesPath": "C:\\Users\\nsima\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\nsima\\OneDrive - VertiGIS\\Documents\\temp\\Lavender\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\nicks\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\nsima\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -2624,7 +2624,8 @@
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
-        "net8.0-windows7.0": {
+        "net8.0-windows": {
+          "framework": "net8.0-windows7.0",
           "targetAlias": "net8.0-windows",
           "projectReferences": {}
         }
@@ -2639,10 +2640,11 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "9.0.300"
+      "SdkAnalysisLevel": "10.0.300"
     },
     "frameworks": {
-      "net8.0-windows7.0": {
+      "net8.0-windows": {
+        "framework": "net8.0-windows7.0",
         "targetAlias": "net8.0-windows",
         "dependencies": {
           "Microsoft.Build.Framework": {
@@ -2687,6 +2689,24 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[8.0.28, 8.0.28]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
+            "version": "[8.0.28, 8.0.28]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[8.0.28, 8.0.28]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[8.0.28, 8.0.28]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
@@ -2695,7 +2715,7 @@
             "privateAssets": "none"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.315/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

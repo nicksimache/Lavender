@@ -33,8 +33,7 @@ public sealed class SymbolSourceTool
 
         if (!_state.IsProjectIndexed)
         {
-            return SymbolSourceToolResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
+            await _state.WaitForProjectIndexed();
         }
 
         try

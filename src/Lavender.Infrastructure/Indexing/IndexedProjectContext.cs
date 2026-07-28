@@ -1,4 +1,4 @@
-using Microsoft.Build.Locator;
+using Lavender.Infrastructure.Build;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 
@@ -36,10 +36,7 @@ public sealed class IndexedProjectContext : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionOrProjectPath);
 
-        if (!MSBuildLocator.IsRegistered)
-        {
-            MSBuildLocator.RegisterDefaults();
-        }
+        MSBuildRegistration.EnsureRegistered();
 
         var warnings = new List<string>();
         var workspace = MSBuildWorkspace.Create();

@@ -29,8 +29,7 @@ public sealed class DiagnosticsTool
     {
         if (!_state.IsProjectIndexed)
         {
-            return DiagnosticsToolResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
+            await _state.WaitForProjectIndexed();
         }
 
         try

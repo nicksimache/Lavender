@@ -30,6 +30,23 @@ namespace Lavender.App
         private string? currSelectedFile;
         private string? _selectedProjectPath;
         private string? _selectedSolutionPath;
+        private static readonly HashSet<string> ExplorerFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".cs",
+            ".xaml",
+            ".py",
+            ".csproj",
+            ".sln",
+            ".json",
+            ".md",
+            ".txt"
+        };
+
+        private static readonly HashSet<string> ExplorerFileNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".gitignore",
+            "requirements.txt"
+        };
 
         // nullable services since they require project dir as constructor fields
         private ProjectScanner? _projectScanner;
@@ -111,6 +128,22 @@ namespace Lavender.App
         /// <param name="e"></param>
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
+            await SendCurrentQueryAsync();
+        }
+
+        private async void UserInputBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                return;
+            }
+
+            e.Handled = true;
+            await SendCurrentQueryAsync();
+        }
+
+        private async Task SendCurrentQueryAsync()
+        {
             string input = UserInputBox.Text.Trim();
 
             if (string.IsNullOrWhiteSpace(input))
@@ -127,13 +160,18 @@ namespace Lavender.App
                     _activeConversationId,
                     input,
                     BuildProjectContext());
+
+                foreach (string diagnostic in result.ToolDiagnostics ?? [])
+                {
+                    AddMessageBubble($"Tool error: {diagnostic}", false);
+                }
+
                 AddMessageBubble(result.FinalAnswer, false);
             }
             catch (Exception ex)
             {
                 AddMessageBubble($"Error: {ex.Message}", false);
             }
-
         }
 
         private void AddMessageBubble(string message, bool isUser)
@@ -183,7 +221,8 @@ namespace Lavender.App
         {
             var dialog = new OpenFolderDialog
             {
-                Title = "Select a Unity Project"
+                Title = "Select a Unity Project",
+                InitialDirectory = GetProjectPickerInitialDirectory()
             };
 
             if (dialog.ShowDialog() != true)
@@ -209,14 +248,7 @@ namespace Lavender.App
 
             FolderView.Items.Clear();
 
-            var rootItem = new TreeViewItem
-            {
-                Header = Path.GetFileName(selectedPath),
-                Tag = selectedPath
-            };
-
-            rootItem.Items.Add(null);
-            rootItem.Expanded += Folder_Expanded;
+            TreeViewItem rootItem = BuildDisplayableExplorerDirectory(selectedPath, includeIfEmpty: true)!;
             FolderView.Items.Add(rootItem);
             rootItem.IsExpanded = true;
 
@@ -227,7 +259,6 @@ namespace Lavender.App
 
             try
             {
-                // We're embedding the project here for now.
                 await _projectIndexer.IndexProjectAsync(
                     selectedPath,
                     solutionOrProjectPath);
@@ -243,6 +274,20 @@ namespace Lavender.App
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        private string GetProjectPickerInitialDirectory()
+        {
+            if (!string.IsNullOrWhiteSpace(_selectedProjectPath))
+            {
+                string? parentPath = Directory.GetParent(_selectedProjectPath)?.FullName;
+                if (!string.IsNullOrWhiteSpace(parentPath) && Directory.Exists(parentPath))
+                {
+                    return parentPath;
+                }
+            }
+
+            return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         }
 
         private static string FindSolution(string directory)
@@ -309,98 +354,105 @@ namespace Lavender.App
                 "Could not locate the Lavender repository root.");
         }
 
-        /// <summary>
-        /// Event handler for when a folder is expanded
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Folder_Expanded(object sender, RoutedEventArgs e)
+        private static TreeViewItem? BuildDisplayableExplorerDirectory(string directoryPath, bool includeIfEmpty = false)
         {
-            var item = (TreeViewItem)sender;
-
-            if (item.Items.Count != 1 || item.Items[0] != null)
+            if (!includeIfEmpty && ProjectScanner.ShouldIgnoreFolder(directoryPath))
             {
-                return;
+                return null;
             }
-
-            item.Items.Clear();
-
-            var fullPath = (string)item.Tag;
-
-            #region Get Folders
-
-            var directories = new List<string>();
 
             try
             {
-                var dirs = Directory.GetDirectories(fullPath);
-
-                if (dirs.Length > 0)
+                if (File.GetAttributes(directoryPath).HasFlag(FileAttributes.ReparsePoint))
                 {
-                    foreach (var d in dirs)
-                    {
-                        if (!ProjectScanner.ShouldIgnoreFolder(d))
-                        {
-                            directories.Add(d);
-                        }
-                    }
+                    return null;
                 }
             }
-            catch { }
-
-            directories.ForEach(directoryPath =>
+            catch (UnauthorizedAccessException)
             {
-                var subitem = new TreeViewItem()
-                {
-                    Header = GetFileFolderName(directoryPath),
-                    Tag = directoryPath
-                };
-
-                subitem.Items.Add(null);
-
-                subitem.Expanded += Folder_Expanded;
-
-                item.Items.Add(subitem);
-            });
-
-            #endregion
-
-            #region Get Files
-
-            var files = new List<string>();
-
-            try
+                return null;
+            }
+            catch (IOException)
             {
-                var fs = Directory.GetFiles(fullPath);
+                return null;
+            }
 
-                if (fs.Length > 0)
+            var directoryItem = new TreeViewItem
+            {
+                Header = GetFileFolderName(directoryPath),
+                Tag = directoryPath
+            };
+
+            foreach (string childDirectory in SafeEnumerateDirectories(directoryPath)
+                         .OrderBy(GetFileFolderName, StringComparer.OrdinalIgnoreCase))
+            {
+                TreeViewItem? childItem = BuildDisplayableExplorerDirectory(childDirectory);
+                if (childItem is not null)
                 {
-                    foreach (var f in fs)
-                    {
-                        if (!ProjectScanner.ShouldIgnoreFile(f))
-                        {
-                            files.Add(f);
-                        }
-                    }
+                    directoryItem.Items.Add(childItem);
                 }
             }
-            catch { }
 
-            files.ForEach(filePath =>
+            foreach (string filePath in SafeEnumerateFiles(directoryPath)
+                         .Where(IsDisplayableExplorerFile)
+                         .OrderBy(GetFileFolderName, StringComparer.OrdinalIgnoreCase))
             {
-                var subitem = new TreeViewItem()
+                directoryItem.Items.Add(new TreeViewItem
                 {
                     Header = GetFileFolderName(filePath),
                     Tag = filePath
-                };
+                });
+            }
 
-                item.Items.Add(subitem);
-            });
+            return includeIfEmpty || directoryItem.Items.Count > 0
+                ? directoryItem
+                : null;
+        }
 
-            #endregion
+        private static bool IsDisplayableExplorerFile(string filePath)
+        {
+            if (ProjectScanner.ShouldIgnoreFile(filePath))
+            {
+                return false;
+            }
 
+            string extension = Path.GetExtension(filePath);
+            string fileName = Path.GetFileName(filePath);
 
+            return ExplorerFileExtensions.Contains(extension)
+                || ExplorerFileNames.Contains(fileName);
+        }
 
+        private static IEnumerable<string> SafeEnumerateDirectories(string directoryPath)
+        {
+            try
+            {
+                return Directory.EnumerateDirectories(directoryPath).ToArray();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Array.Empty<string>();
+            }
+            catch (IOException)
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        private static IEnumerable<string> SafeEnumerateFiles(string directoryPath)
+        {
+            try
+            {
+                return Directory.EnumerateFiles(directoryPath).ToArray();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Array.Empty<string>();
+            }
+            catch (IOException)
+            {
+                return Array.Empty<string>();
+            }
         }
 
         /// <summary>
@@ -438,8 +490,7 @@ namespace Lavender.App
                 return;
             }
 
-            if (File.Exists(path) &&
-                Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+            if (File.Exists(path) && IsDisplayableExplorerFile(path))
             {
                 currSelectedFile = path;
 
@@ -495,7 +546,7 @@ namespace Lavender.App
             if (!File.Exists(path))
                 return;
 
-            if (!Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+            if (!IsDisplayableExplorerFile(path))
                 return;
 
             DragDrop.DoDragDrop(FolderView, path, DragDropEffects.Copy);
@@ -524,7 +575,7 @@ namespace Lavender.App
             if (!File.Exists(path))
                 return;
 
-            if (!Path.GetExtension(path).Equals(".cs", StringComparison.OrdinalIgnoreCase))
+            if (!IsDisplayableExplorerFile(path))
                 return;
 
             if (!contextFiles.Contains(path))

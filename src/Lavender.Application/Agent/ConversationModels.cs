@@ -52,7 +52,8 @@ public sealed record AgentRunResult(
     AgentRunStatus Status,
     int Iterations,
     int ToolCalls,
-    string? StopReason = null);
+    string? StopReason = null,
+    IReadOnlyList<string>? ToolDiagnostics = null);
 
 public interface IConversationStore
 {

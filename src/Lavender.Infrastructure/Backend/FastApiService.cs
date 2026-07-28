@@ -173,7 +173,7 @@ namespace Lavender.Infrastructure.Backend
                     "embed-project",
                     request);
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessWithBodyAsync(response);
         }
 
         public async Task<VectorSearchCodeChunk_ObjectRecv> SearchProjectAsync(string query, int topK)
@@ -187,7 +187,7 @@ namespace Lavender.Infrastructure.Backend
             HttpResponseMessage response =
                 await httpClient.PostAsJsonAsync("search", request);
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessWithBodyAsync(response);
 
             VectorSearchCodeChunk_ObjectRecv? searchResponse =
                 await response.Content.ReadFromJsonAsync<VectorSearchCodeChunk_ObjectRecv>();
@@ -198,6 +198,22 @@ namespace Lavender.Infrastructure.Backend
             }
 
             return searchResponse;
+        }
+
+        private static async Task EnsureSuccessWithBodyAsync(HttpResponseMessage response)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            string body = await response.Content.ReadAsStringAsync();
+            string message = string.IsNullOrWhiteSpace(body)
+                ? response.ReasonPhrase ?? "Request failed."
+                : body;
+
+            throw new HttpRequestException(
+                $"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase}). {message}");
         }
 
         public void StopServer()

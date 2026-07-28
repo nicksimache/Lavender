@@ -14,19 +14,193 @@ namespace Lavender.Infrastructure.Indexing.Chunking
 {
     public class CodeChunkService
     {
+        private const int GenericChunkLineLimit = 200;
+
+        private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".cs",
+            ".xaml",
+            ".py",
+            ".csproj",
+            ".sln",
+            ".json",
+            ".md",
+            ".txt"
+        };
+
+        private static readonly HashSet<string> SupportedFileNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".gitignore",
+            "requirements.txt"
+        };
+
+        private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".git",
+            ".vs",
+            ".venv",
+            "__pycache__",
+            "bin",
+            "obj",
+            "lavender_vectors",
+            "node_modules",
+            "packages",
+            "artifacts"
+        };
+
         public static List<CodeChunk> GetCodeChunksFromFolder(string dir)
         {
             var codeChunks = new List<CodeChunk>();
 
-            foreach (string file in Directory.GetFiles(
-                         dir,
-                         "*.cs",
-                         SearchOption.AllDirectories))
+            foreach (string file in EnumerateIndexableFiles(dir))
             {
-                codeChunks.AddRange(GetCodeChunks(file));
+                codeChunks.AddRange(
+                    Path.GetExtension(file).Equals(".cs", StringComparison.OrdinalIgnoreCase)
+                        ? GetCodeChunks(file)
+                        : GetGenericFileChunks(file));
             }
 
             return codeChunks;
+        }
+
+        private static IEnumerable<string> EnumerateIndexableFiles(string root)
+        {
+            foreach (string filePath in SafeEnumerateFiles(root))
+            {
+                if (IsIndexableFile(filePath))
+                {
+                    yield return filePath;
+                }
+            }
+
+            foreach (string directoryPath in SafeEnumerateDirectories(root))
+            {
+                if (ShouldIgnoreDirectory(directoryPath))
+                {
+                    continue;
+                }
+
+                foreach (string filePath in EnumerateIndexableFiles(directoryPath))
+                {
+                    yield return filePath;
+                }
+            }
+        }
+
+        private static bool IsIndexableFile(string filePath)
+        {
+            string extension = Path.GetExtension(filePath);
+            string fileName = Path.GetFileName(filePath);
+
+            return SupportedExtensions.Contains(extension)
+                || SupportedFileNames.Contains(fileName);
+        }
+
+        private static bool ShouldIgnoreDirectory(string directoryPath)
+        {
+            string directoryName = Path.GetFileName(directoryPath);
+            return IgnoredDirectoryNames.Contains(directoryName);
+        }
+
+        private static IEnumerable<string> SafeEnumerateFiles(string directoryPath)
+        {
+            try
+            {
+                return Directory.EnumerateFiles(directoryPath).ToArray();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Array.Empty<string>();
+            }
+            catch (IOException)
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        private static IEnumerable<string> SafeEnumerateDirectories(string directoryPath)
+        {
+            try
+            {
+                return Directory.EnumerateDirectories(directoryPath).ToArray();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Array.Empty<string>();
+            }
+            catch (IOException)
+            {
+                return Array.Empty<string>();
+            }
+        }
+
+        private static List<CodeChunk> GetGenericFileChunks(string filePath)
+        {
+            string fileText = File.ReadAllText(filePath);
+            string[] lines = fileText.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+
+            if (lines.Length <= GenericChunkLineLimit)
+            {
+                return new List<CodeChunk> { CreateGenericFileChunk(filePath, fileText, 1, lines.Length, "WholeFile") };
+            }
+
+            var chunks = new List<CodeChunk>();
+            for (int startIndex = 0; startIndex < lines.Length; startIndex += GenericChunkLineLimit)
+            {
+                string chunkText = string.Join(
+                    "\n",
+                    lines.Skip(startIndex).Take(GenericChunkLineLimit));
+
+                int startLine = startIndex + 1;
+                int endLine = Math.Min(lines.Length, startIndex + GenericChunkLineLimit);
+
+                chunks.Add(CreateGenericFileChunk(
+                    filePath,
+                    chunkText,
+                    startLine,
+                    endLine,
+                    $"Lines-{startLine}-{endLine}"));
+            }
+
+            return chunks;
+        }
+
+        private static CodeChunk CreateGenericFileChunk(
+            string filePath,
+            string code,
+            int startLine,
+            int endLine,
+            string chunkKey)
+        {
+            string relativePath = Path.GetRelativePath(
+                Directory.GetCurrentDirectory(),
+                filePath);
+
+            var chunk = new CodeChunk
+            {
+                Id = Convert.ToHexString(
+                    SHA256.HashData(
+                        Encoding.UTF8.GetBytes($"{relativePath}:{chunkKey}"))),
+
+                FilePath = filePath,
+                RelativePath = relativePath,
+                ChunkType = CodeChunk.E_ChunkType.WholeFile,
+                Signature = $"File type: {GetFileKind(filePath)}",
+                StartLine = startLine,
+                EndLine = endLine,
+                Code = code
+            };
+
+            chunk.EmbeddingText = BuildEmbeddingText(chunk);
+            return chunk;
+        }
+
+        private static string GetFileKind(string filePath)
+        {
+            string extension = Path.GetExtension(filePath).TrimStart('.');
+            return string.IsNullOrWhiteSpace(extension)
+                ? Path.GetFileName(filePath)
+                : extension;
         }
 
         private static List<CodeChunk> GetCodeChunks(string filePath)

@@ -5,6 +5,8 @@ namespace Lavender.McpServer;
 
 public sealed class LavenderMcpState : IDisposable
 {
+    private const int PollInterval = 100;
+
     private readonly ProjectIndexer _projectIndexer = new();
 
     public string? ProjectPath { get; private set; }
@@ -29,6 +31,14 @@ public sealed class LavenderMcpState : IDisposable
         return KnowledgeService
             ?? throw new InvalidOperationException(
                 "No project is indexed. Call lavender_index_project first.");
+    }
+
+    public async Task WaitForProjectIndexed(CancellationToken cancellationToken = default)
+    {
+        while (!IsProjectIndexed)
+        {
+            await Task.Delay(PollInterval, cancellationToken);
+        }
     }
 
     public void Dispose()

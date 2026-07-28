@@ -1,5 +1,5 @@
 import lancedb
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from openai import OpenAI
 
@@ -78,34 +78,37 @@ def embed_project(request: EmbedProjectRequest):
 
 @app.post("/search")
 def search(request: SearchRequest):
-    table = db.open_table(TABLE_NAME)
-    query_vector = get_embedding(request.query)
+    try:
+        table = db.open_table(TABLE_NAME)
+        query_vector = get_embedding(request.query)
 
-    raw_results = (
-        table.search(query_vector)
-        .distance_type("cosine")
-        .limit(request.top_k)
-        .to_list()
-    )
+        raw_results = (
+            table.search(query_vector)
+            .distance_type("cosine")
+            .limit(request.top_k)
+            .to_list()
+        )
 
-    print(raw_results[:5])
+        print(raw_results[:5])
 
-    results = []
+        results = []
 
-    for row in raw_results:
-        results.append({
-            "file_path": row["file_path"],
-            "chunk_type": row["chunk_type"],
-            "namespace": row["namespace"],
-            "class_name": row["class_name"],
-            "member_name": row["member_name"],
-            "signature": row["signature"],
-            "start_line": row["start_line"],
-            "end_line": row["end_line"],
-            "code": row["code"],
-            "distance": row["_distance"]
-        })
+        for row in raw_results:
+            results.append({
+                "file_path": row["file_path"],
+                "chunk_type": row["chunk_type"],
+                "namespace": row["namespace"],
+                "class_name": row["class_name"],
+                "member_name": row["member_name"],
+                "signature": row["signature"],
+                "start_line": row["start_line"],
+                "end_line": row["end_line"],
+                "code": row["code"],
+                "distance": row["_distance"]
+            })
 
-    return {
-        "results": results
-    }
+        return {
+            "results": results
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

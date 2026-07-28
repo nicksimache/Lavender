@@ -1,20 +1,20 @@
 ﻿Lavender
-
+1.0.0.0
 
 winexe
 C#
 .cs
-C:\Users\nicks\source\repos\Lavender\obj\Debug\net8.0-windows\
+C:\Users\nsima\OneDrive - VertiGIS\Documents\temp\Lavender\obj\Debug\net8.0-windows\
 Lavender
 none
 false
 TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
-C:\Users\nicks\source\repos\Lavender\src\Lavender.App\App.xaml
+C:\Users\nsima\OneDrive - VertiGIS\Documents\temp\Lavender\src\Lavender.App\App.xaml
 11425318212
-231827369862
-38-750443518
-232-934485586
+231344062140
+41-1234350164
+232104232682
 src\Lavender.App\MainWindow.xaml;
 
-False
+True
 

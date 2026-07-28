@@ -22,6 +22,8 @@ namespace Lavender.App.Rendering
 
         public static List<CodeSpan> HighlightCSharpCode(string code)
         {
+            code = NormalizeLineEndings(code);
+
             var spans = new List<CodeSpan>();
             int i = 0;
 
@@ -100,6 +102,11 @@ namespace Lavender.App.Rendering
         #endregion
 
         #region Return Strings
+
+        private static string NormalizeLineEndings(string code)
+        {
+            return code.Replace("\r\n", "\n").Replace('\r', '\n');
+        }
 
         private static string ReadUntilNewLine(string code, ref int i)
         {

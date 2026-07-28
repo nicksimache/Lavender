@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Build.Locator;
+using Lavender.Infrastructure.Build;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 
@@ -15,10 +15,7 @@ namespace Lavender.src.Lavender.Infrastructure.FileSystem
             string projectPath,
             CancellationToken cancellationToken = default)
         {
-            if (!MSBuildLocator.IsRegistered)
-            {
-                MSBuildLocator.RegisterDefaults();
-            }
+            MSBuildRegistration.EnsureRegistered();
 
             using var workspace = MSBuildWorkspace.Create();
 
@@ -39,10 +36,7 @@ namespace Lavender.src.Lavender.Infrastructure.FileSystem
             string solutionPath,
             CancellationToken cancellationToken = default)
         {
-            if (!MSBuildLocator.IsRegistered)
-            {
-                MSBuildLocator.RegisterDefaults();
-            }
+            MSBuildRegistration.EnsureRegistered();
 
             using var workspace = MSBuildWorkspace.Create();
 

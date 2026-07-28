@@ -36,8 +36,7 @@ public sealed class SemanticSearchTool
 
         if (!_state.IsProjectIndexed)
         {
-            return SemanticSearchResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
+            await _state.WaitForProjectIndexed();
         }
 
         int boundedTopK = Math.Clamp(topK, 1, MaxTopK);

@@ -25,8 +25,7 @@ public sealed class GitTools
     {
         if (!_state.IsProjectIndexed)
         {
-            return GitStatusToolResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
+            await _state.WaitForProjectIndexed();
         }
 
         try

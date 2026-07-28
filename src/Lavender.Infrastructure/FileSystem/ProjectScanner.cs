@@ -39,6 +39,12 @@ namespace Lavender.Infrastructure.FileSystem
                 || folderName.Equals("obj", StringComparison.OrdinalIgnoreCase)
                 || folderName.Equals(".git", StringComparison.OrdinalIgnoreCase)
                 || folderName.Equals(".vs", StringComparison.OrdinalIgnoreCase)
+                || folderName.Equals(".venv", StringComparison.OrdinalIgnoreCase)
+                || folderName.Equals("__pycache__", StringComparison.OrdinalIgnoreCase)
+                || folderName.Equals("lavender_vectors", StringComparison.OrdinalIgnoreCase)
+                || folderName.Equals("node_modules", StringComparison.OrdinalIgnoreCase)
+                || folderName.Equals("packages", StringComparison.OrdinalIgnoreCase)
+                || folderName.Equals("artifacts", StringComparison.OrdinalIgnoreCase)
                 || folderName.Equals("Build", StringComparison.OrdinalIgnoreCase)
                 || folderName.Equals("Builds", StringComparison.OrdinalIgnoreCase);
         }

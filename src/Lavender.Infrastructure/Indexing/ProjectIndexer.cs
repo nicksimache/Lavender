@@ -8,6 +8,7 @@ using Lavender.Infrastructure.Indexing.Relationships;
 using Lavender.Infrastructure.Indexing.Symbol;
 using Lavender.Infrastructure.Knowledge;
 using Lavender.Infrastructure.Source;
+using System.Diagnostics;
 
 namespace Lavender.Infrastructure.Indexing;
 
