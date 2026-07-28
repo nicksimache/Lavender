@@ -164,17 +164,20 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Width="18"
-                        Height="18"
-                        CornerRadius="3"
-                        Background="#7653B5"
+                <Border Width="22"
+                        Height="22"
+                        Background="#303033"
+                        BorderBrush="#414145"
+                        BorderThickness="1"
+                        CornerRadius="4"
                         VerticalAlignment="Center">
-                    <TextBlock Text="L"
-                               Foreground="White"
-                               FontSize="11"
-                               FontWeight="Bold"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center"/>
+                    <Image Width="16"
+                           Height="16"
+                           Source="/src/Lavender.App/Assets/Images/lavender_icon_small.png"
+                           Stretch="Uniform"
+                           SnapsToDevicePixels="True"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
                 </Border>
 
                 <StackPanel Grid.Column="1"

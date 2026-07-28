@@ -35,6 +35,8 @@
 	<ItemGroup>
 		<Resource Include="src\Lavender.App\Assets\Images\cs_icon.png" />
 		<Resource Include="src\Lavender.App\Assets\Images\C_Sharp_Logo_2023.png" />
+		<Resource Include="src\Lavender.App\Assets\Images\lavender_icon.png" />
+		<Resource Include="src\Lavender.App\Assets\Images\lavender_icon_small.png" />
 	</ItemGroup>
 
 	<ItemGroup>
