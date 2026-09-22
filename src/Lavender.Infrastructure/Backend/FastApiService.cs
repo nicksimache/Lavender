@@ -7,6 +7,8 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Lavender.Core.DataTypes;
 
 namespace Lavender.Infrastructure.Backend
@@ -15,6 +17,7 @@ namespace Lavender.Infrastructure.Backend
     {
         private static FastApiService? _instance;
         private Process? _serverProcess;
+        private FileStream? _ownershipLock;
 
         public static FastApiService Instance
         {
@@ -36,22 +39,75 @@ namespace Lavender.Infrastructure.Backend
             BaseAddress = new Uri("http://localhost:8000/")
         };
 
-        private async Task<bool> IsServerRunning()
+        // Only the desktop owns the backend lifecycle. MCP callers use StartServerAsync
+        // to connect to the existing server and must never restart it while indexing.
+        public async Task StartFreshServerAsync(CancellationToken cancellationToken = default)
         {
+            string projectRoot = FindProjectRoot();
+            string stateDirectory = Path.Combine(projectRoot, "artifacts", "backend");
+            Directory.CreateDirectory(stateDirectory);
             try
             {
-                HttpResponseMessage response = await httpClient.GetAsync("");
-                return response.IsSuccessStatusCode;
+                _ownershipLock = new FileStream(Path.Combine(stateDirectory, "owner.lock"),
+                    FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            }
+            catch (IOException ex)
+            {
+                throw new InvalidOperationException("Another Lavender instance is already managing this project's backend. Close it first.", ex);
+            }
+
+            try
+            {
+                // Match the exact Lavender launch command, not every Python process or
+                // an arbitrary service listening on port 8000. Covers venv launcher + child.
+                var cleanup = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),
+                        "WindowsPowerShell", "v1.0", "powershell.exe"),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                };
+                cleanup.Environment["LAVENDER_BACKEND_PYTHON"] = Path.Combine(projectRoot, ".venv", "Scripts", "python.exe");
+                cleanup.ArgumentList.Add("-NoProfile");
+                cleanup.ArgumentList.Add("-NonInteractive");
+                cleanup.ArgumentList.Add("-Command");
+                cleanup.ArgumentList.Add("$ErrorActionPreference = 'Stop'; " +
+                    "$expected = '\"' + $env:LAVENDER_BACKEND_PYTHON + '\" -m uvicorn main:app --host 127.0.0.1 --port 8000'; " +
+                    "$backendCandidates = @(Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | " +
+                    "Where-Object { $_.CommandLine -and $_.CommandLine.Trim() -eq $expected }); " +
+                    "foreach ($entry in $backendCandidates) { " +
+                    "$current = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $entry.ProcessId); " +
+                    "if ($current -and $current.CreationDate -eq $entry.CreationDate -and $current.CommandLine.Trim() -eq $expected) { " +
+                    "Stop-Process -Id $entry.ProcessId -Force; Wait-Process -Id $entry.ProcessId -Timeout 5 -ErrorAction SilentlyContinue } }");
+                using Process process = Process.Start(cleanup)
+                    ?? throw new InvalidOperationException("Could not clean up the previous backend.");
+                Task<string> stderr = process.StandardError.ReadToEndAsync();
+                Task<string> stdout = process.StandardOutput.ReadToEndAsync();
+                await process.WaitForExitAsync();
+                await stdout;
+                string error = await stderr;
+                if (process.ExitCode != 0)
+                    throw new InvalidOperationException($"Could not stop the previous Lavender backend: {error}");
+
+                cancellationToken.ThrowIfCancellationRequested();
+                await StartServerAsync(cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_serverProcess is null)
+                    throw new InvalidOperationException("Port 8000 is already occupied. Lavender could not start a fresh backend.");
             }
             catch
             {
-                return false;
+                StopServer();
+                throw;
             }
         }
 
-        public async Task StartServerAsync()
+        public async Task StartServerAsync(CancellationToken cancellationToken = default)
         {
-            if (await IsServerRunningAsync())
+            cancellationToken.ThrowIfCancellationRequested();
+            if (await IsServerRunningAsync(cancellationToken))
             {
                 return;
             }
@@ -106,15 +162,35 @@ namespace Lavender.Infrastructure.Backend
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
 
-            await WaitForServerAsync();
+            try { await WaitForServerAsync(cancellationToken); }
+            catch { StopServer(); throw; }
         }
 
-        private async Task<bool> IsServerRunningAsync()
+        private async Task<bool> IsServerRunningAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                using var response = await httpClient.GetAsync("");
-                return response.IsSuccessStatusCode;
+                using var response = await httpClient.GetAsync("", cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return false;
+                }
+
+                string sourcePath = Path.Combine(FindProjectRoot(), "backend", "app", "main.py");
+                string expectedRevision = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(sourcePath)));
+                using JsonDocument? health = await response.Content.ReadFromJsonAsync<JsonDocument>();
+                if (health is null ||
+                    !health.RootElement.TryGetProperty("service", out JsonElement service) ||
+                    service.GetString() != "lavender" ||
+                    !health.RootElement.TryGetProperty("source_revision", out JsonElement revision) ||
+                    revision.GetString() != expectedRevision)
+                {
+                    throw new InvalidOperationException(
+                        "An outdated or different backend is already running on port 8000. " +
+                        "Close Lavender and stop its old Python backend, then launch Lavender again.");
+                }
+
+                return true;
             }
             catch (HttpRequestException)
             {
@@ -122,22 +198,23 @@ namespace Lavender.Infrastructure.Backend
             }
         }
 
-        private async Task WaitForServerAsync()
+        private async Task WaitForServerAsync(CancellationToken cancellationToken)
         {
             for (int attempt = 0; attempt < 30; attempt++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (_serverProcess?.HasExited == true)
                 {
                     throw new InvalidOperationException(
                         $"FastAPI exited during startup with code {_serverProcess.ExitCode}.");
                 }
 
-                if (await IsServerRunningAsync())
+                if (await IsServerRunningAsync(cancellationToken))
                 {
                     return;
                 }
 
-                await Task.Delay(500);
+                await Task.Delay(500, cancellationToken);
             }
 
             throw new TimeoutException(
@@ -218,11 +295,25 @@ namespace Lavender.Infrastructure.Backend
 
         public void StopServer()
         {
-            if (_serverProcess is { HasExited: false })
+            Process? process = _serverProcess;
+            _serverProcess = null;
+            try
             {
-                _serverProcess.Kill(entireProcessTree: true);
-                _serverProcess.Dispose();
-                _serverProcess = null;
+                if (process is not null && !process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    process.WaitForExit(5000);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // The process may have exited already or failed before it started.
+            }
+            finally
+            {
+                process?.Dispose();
+                _ownershipLock?.Dispose();
+                _ownershipLock = null;
             }
         }
 

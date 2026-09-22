@@ -7,7 +7,6 @@ public sealed class AgentSettings
     public string Model { get; init; } = "gpt-4.1-mini";
     public int MaxIterations { get; init; } = 8;
     public int MaxToolCalls { get; init; } = 16;
-    public int MaxParallelToolCalls { get; init; } = 4;
     public int ToolTimeoutSeconds { get; init; } = 30;
     public int MaxToolResultCharacters { get; init; } = 50_000;
     public int MaxConversationTurns { get; init; } = 10;
@@ -42,7 +41,7 @@ public sealed class AgentSettings
             throw new InvalidOperationException("Agent:Model must be configured.");
         }
 
-        if (MaxIterations < 1 || MaxToolCalls < 1 || MaxParallelToolCalls < 1)
+        if (MaxIterations < 1 || MaxToolCalls < 1 || MaxConversationTurns < 1)
         {
             throw new InvalidOperationException("Agent limits must be greater than zero.");
         }

@@ -48,7 +48,7 @@ public sealed class ProjectIndexer : IDisposable
             CodeRelationshipGraph relationships = await new CodeRelationshipIndexer(identity).IndexAsync(newContext, symbols, cancellationToken);
             ProjectDependencyGraph dependencies = new ProjectDependencyIndexer().Index(newContext);
 
-            KnowledgeService = new ProjectKnowledgeService(
+            var knowledgeService = new ProjectKnowledgeService(
                 symbols,
                 new SymbolSourceService(symbols, newContext),
                 relationships,
@@ -56,12 +56,14 @@ public sealed class ProjectIndexer : IDisposable
                 new GitContextService(projectPath),
                 dependencies);
 
-            IndexedProjectContext? old = _context;
-            _context = newContext;
-            old?.Dispose();
-
             await FastApiService.Instance.StartServerAsync();
             await FastApiService.Instance.EmbedProjectAsync(chunks);
+
+            // Publish the new index only after both code and vector indexing succeed.
+            IndexedProjectContext? old = _context;
+            _context = newContext;
+            KnowledgeService = knowledgeService;
+            old?.Dispose();
         }
         catch
         {

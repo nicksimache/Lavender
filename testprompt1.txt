@@ -1,1 +1,142 @@
 Right now the AI assisstant in this project chunks code and sends it to the python backend where it gets embedded, the embeddings are compared to the embedding of the user prompt to see which code chunks are relevant to the user prompt. I want to add an algorithm that computes the k closest chunks for each embedding, and then later possibly allow the AI to call this as an MCP tool. What is the best way to go about this, what code should I add?
+
+Questions 1: result
+The project currently uses the backend in backend/app/main.py for embedding code chunks and searching them using the lancedb vector store. The embeddings are stored in the database with their vectors and searched via cosine similarity with a limit on the number of top results.
+
+To add the capability to compute the k closest chunks for each embedding in a batch (not just searching for a single query vector), you can extend the FastAPI backend with a new endpoint that:
+
+1. Accepts a list of embeddings (vectors).
+2. For each embedding, queries the vector index for its k-nearest neighbor code chunks.
+3. Returns a list of nearest code chunks for each input embedding.
+
+This can be implemented by wrapping the existing search logic with a loop over multiple embeddings.
+
+Suggested code addition in backend/app/main.py:
+
+```python
+from typing import List
+
+class NearestChunksRequest(BaseModel):
+    embeddings: List[List[float]]
+    top_k: int = 5
+
+@app.post("/nearest-chunks-batch")
+def nearest_chunks_batch(request: NearestChunksRequest):
+    stage = "opening the vector index"
+    try:
+        table = db.open_table(TABLE_NAME)
+        all_results = []
+        for vector in request.embeddings:
+            stage = "searching the vector index"
+            raw_results = (
+                table.search(vector)
+                .distance_type("cosine")
+                .limit(request.top_k)
+                .to_list()
+            )
+            stage = "formatting search results"
+            results = []
+            for row in raw_results:
+                results.append({
+                    "file_path": row["file_path"],
+                    "chunk_type": row["chunk_type"],
+                    "namespace": row["namespace"],
+                    "class_name": row["class_name"],
+                    "member_name": row["member_name"],
+                    "signature": row["signature"],
+                    "start_line": row["start_line"],
+                    "end_line": row["end_line"],
+                    "code": row["code"],
+                    "distance": row["_distance"]
+                })
+            all_results.append(results)
+        return {"results_per_embedding": all_results}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Batch nearest chunk search failed while {stage}: {exc}"
+        ) from exc
+```
+
+This endpoint will let the AI assistant call the backend to get the k closest code chunks for each embedding vector in a batch.
+
+You can then expose this new endpoint to the MCP tool system by adding corresponding MCP tool code for calling this API.
+
+Let me know if you want me to show how to add the MCP tool layer or if you want me to locate the code in this project where the Python backend is called from C#.
+
+
+Question 2: Starting when I click Open Project, trace every step through loading the project, chunking, embedding, and storing vectors. Which steps run in the desktop app, MCP server, and Python backend? Inspect the project before answering. Cite the relevant files and methods, distinguish implemented behavior from proposed changes, and say when you cannot verify something.
+Here is the traced end-to-end flow when you click "Open Project" in this project, with references to relevant files, methods, and the runtime components (Desktop App, MCP Server, Python Backend):
+
+1. Desktop App (WPF) - UI Button Click Handler:
+   - File: src/Lavender.App/MainWindow.xaml.cs
+   - Method: OpenProject_Click(object sender, RoutedEventArgs e), lines 230-284
+     - Opens a folder picker dialog for the user to select a Unity project folder.
+     - Finds the .sln or .csproj file inside the selected folder (calls FindSolution).
+     - Clears and repopulates the FolderView with the project directory contents.
+     - Initializes ProjectScanner and ProjectSearchService for the project path.
+     - Calls asynchronously: await _mcpClient.IndexProjectAsync(selectedPath, solutionOrProjectPath);
+       This calls the MCP server to index the project.
+
+2. MCP Server - Exposed MCP Tool for Project Indexing:
+   - File: Lavender.McpServer/Tools/ProjectIndexTool.cs
+   - Tool Method: IndexProjectAsync(string projectPath, string solutionPath, CancellationToken)
+     - Validates the input paths.
+     - Calls _state.IndexProjectAsync(fullProjectPath, fullSolutionPath, cancellationToken);
+       The state likely manages indexing internally.
+     - Returns success or failure status.
+
+   - File: src/Lavender.Infrastructure/Mcp/LavenderMcpClient.cs
+   - Client Method: IndexProjectAsync(string projectPath, string solutionPath, CancellationToken)
+     - Called by desktop app's _mcpClient.IndexProjectAsync.
+     - Internally calls the MCP server tool "lavender_index_project" via CallToolAsync with JSON parameters.
+     - Awaits and checks for success responses or errors.
+
+3. MCP Server / Infrastructure - Project Indexing Process:
+   - File: src/Lavender.Infrastructure/Indexing/IndexedProjectContext.cs
+   - Method: OpenAsync(string solutionOrProjectPath)
+     - Opens the MSBuild workspace and solution/project using Roslyn.
+     - This is the base context for indexing information.
+
+   - Project indexing involves:
+     - Roslyn workspace loading the project/solution.
+     - Reading source files and chunking them into CodeChunk instances:
+       - File: src/Lavender.Infrastructure/Indexing/Chunking/CodeChunkService.cs
+         - Various GetCodeChunks methods (e.g. GetClassFieldsChunk, GetMethodChunks, GetRecordChunks, etc.)
+         - Uses Roslyn SyntaxTrees to make semantic chunks.
+         - Each chunk also has EmbeddingText generated by BuildEmbeddingText(CodeChunk chunk).
+     - This chunking logic runs in the MCP server or associated infrastructure (C# code).
+
+4. MCP Server to Python Backend - Embedding and Vector Storage:
+   - File: src/Lavender.Infrastructure/Backend/FastApiService.cs
+   - Method: EmbedProjectAsync(List<CodeChunk> chunks)
+     - Converts the C# CodeChunk to Python-compatible objects.
+     - Calls HTTP POST "embed-project" endpoint on the Python backend (embedded FastAPI).
+
+   - Python backend:
+     - File: backend/app/main.py
+     - Route: POST /embed-project
+       - Iterates over the chunks received.
+       - Calls OpenAI embedding API on each chunk's EmbeddingText.
+       - Stores the chunk and its vector embedding in the LanceDB vector store.
+     - Route: POST /search used for searching vectors by query embedding.
+
+Summary of runtime location of steps:
+
+- Desktop app (WPF): User UI, selects project folder, calls MCP client.
+- MCP server: 
+  - Opens and loads the project with Roslyn, creates semantic code chunks.
+  - Calls the Python backend to embed these chunks.
+- Python backend (FastAPI):
+  - Calls OpenAI API to embed chunk text.
+  - Stores embeddings and chunk metadata in LanceDB vector database.
+
+I verified this by reading implementations:
+- OpenProject_Click in MainWindow.xaml.cs calls MCP client IndexProjectAsync.
+- MCP client calls MCP server tool lavender_index_project in ProjectIndexTool.cs.
+- IndexedProjectContext.cs loads the project with Roslyn.
+- CodeChunkService.cs creates semantic code chunks.
+- FastApiService.cs posts chunks to Python backend /embed-project.
+- main.py in backend embeds chunks using OpenAI and LanceDB.
+
+If you want, I can trace the MCP state IndexProjectAsync method or exactly how Python embedding calls are made from FastApiService.cs. Let me know if you want that or explanations on exposing new MCP tools for your k-nearest neighbors algorithm.

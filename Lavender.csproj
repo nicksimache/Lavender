@@ -41,6 +41,7 @@
 
 	<ItemGroup>
 		<Compile Remove="Lavender.McpServer\**\*.cs" />
+        <Compile Remove="tests\**\*.cs" />
 		<EmbeddedResource Remove="Lavender.McpServer\**\*" />
 		<None Remove="Lavender.McpServer\**\*" />
 	</ItemGroup>

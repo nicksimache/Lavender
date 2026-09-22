@@ -12,9 +12,12 @@ public sealed class JsonConversationStore : IConversationStore
         PropertyNameCaseInsensitive = true
     };
     private readonly SemaphoreSlim _fileLock = new(1, 1);
+    private readonly Dictionary<Guid, Conversation> _memory = new();
+    private readonly bool _persist;
 
-    public JsonConversationStore(string directory)
+    public JsonConversationStore(string directory, bool persist = true)
     {
+        _persist = persist;
         _directory = Path.IsPathRooted(directory)
             ? directory
             : Path.Combine(AppContext.BaseDirectory, directory);
@@ -38,17 +41,16 @@ public sealed class JsonConversationStore : IConversationStore
         CancellationToken cancellationToken = default)
     {
         string path = GetPath(id);
-        if (!File.Exists(path))
-        {
-            return null;
-        }
-
         await _fileLock.WaitAsync(cancellationToken);
         try
         {
+            if (_memory.TryGetValue(id, out Conversation? cached)) return cached;
+            if (!_persist || !File.Exists(path)) return null;
             await using FileStream stream = File.OpenRead(path);
-            return await JsonSerializer.DeserializeAsync<Conversation>(
+            Conversation? loaded = await JsonSerializer.DeserializeAsync<Conversation>(
                 stream, _jsonOptions, cancellationToken);
+            if (loaded is not null) _memory[id] = loaded;
+            return loaded;
         }
         finally
         {
@@ -60,13 +62,16 @@ public sealed class JsonConversationStore : IConversationStore
         Conversation conversation,
         CancellationToken cancellationToken = default)
     {
-        Directory.CreateDirectory(_directory);
         string path = GetPath(conversation.Id);
         string temporaryPath = path + ".tmp";
 
         await _fileLock.WaitAsync(cancellationToken);
         try
         {
+            conversation.ProjectPath = NormalizeProjectPath(conversation.ProjectPath);
+            _memory[conversation.Id] = conversation;
+            if (!_persist) return;
+            Directory.CreateDirectory(_directory);
             await using (FileStream stream = File.Create(temporaryPath))
             {
                 await JsonSerializer.SerializeAsync(
@@ -82,4 +87,49 @@ public sealed class JsonConversationStore : IConversationStore
 
     private string GetPath(Guid id) =>
         Path.Combine(_directory, $"{id:N}.json");
+
+    public async Task<IReadOnlyList<Conversation>> ListAsync(string? projectPath, CancellationToken cancellationToken = default)
+    {
+        projectPath = NormalizeProjectPath(projectPath);
+        if (_persist && Directory.Exists(_directory))
+        {
+            foreach (string path in Directory.EnumerateFiles(_directory, "*.json"))
+            {
+                if (!Guid.TryParse(Path.GetFileNameWithoutExtension(path), out Guid id)) continue;
+                try { await LoadAsync(id, cancellationToken); }
+                catch (JsonException) { /* One damaged history must not hide the others. */ }
+                catch (IOException) { }
+            }
+        }
+        await _fileLock.WaitAsync(cancellationToken);
+        try
+        {
+            return _memory.Values.Where(c => string.Equals(NormalizeProjectPath(c.ProjectPath), projectPath,
+                StringComparison.OrdinalIgnoreCase)).OrderByDescending(c => c.UpdatedAt).ToArray();
+        }
+        finally { _fileLock.Release(); }
+    }
+
+    public static string? NormalizeProjectPath(string? path) => string.IsNullOrWhiteSpace(path)
+        ? null : Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+
+    public async Task ClearProjectAsync(string? projectPath, CancellationToken cancellationToken = default)
+    {
+        var chats = await ListAsync(projectPath, cancellationToken);
+        await _fileLock.WaitAsync(cancellationToken);
+        try
+        {
+            foreach (Conversation chat in chats)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (_persist)
+                {
+                    File.Delete(GetPath(chat.Id));
+                    File.Delete(GetPath(chat.Id) + ".tmp");
+                }
+                _memory.Remove(chat.Id);
+            }
+        }
+        finally { _fileLock.Release(); }
+    }
 }

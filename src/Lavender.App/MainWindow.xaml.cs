@@ -54,8 +54,15 @@ namespace Lavender.App
 
 
         private readonly AgentRunner _agentRunner;
+        private readonly JsonConversationStore _conversations;
+        private bool _busy;
+        private bool _refreshingHistory;
+        private bool _ready;
+        private bool _projectIndexed;
+        private CancellationTokenSource? _activeRun;
+        private readonly CancellationTokenSource _windowLifetime = new();
+        private readonly LastProjectStore _lastProjectStore = new();
         private readonly LavenderMcpClient _mcpClient;
-        private readonly ProjectIndexer _projectIndexer;
         private Guid _activeConversationId;
         private readonly List<string> contextFiles = new();
 
@@ -70,30 +77,44 @@ namespace Lavender.App
             AgentSettings settings = AgentSettings.Load();
             settings.Validate();
             _mcpClient = new LavenderMcpClient(FindRepositoryRoot());
-            JsonConversationStore conversations = new(settings.HistoryDirectory);
+            _conversations = new(settings.HistoryDirectory, settings.PersistHistory);
             OpenAIService model = new(settings.Model);
             _agentRunner = new AgentRunner(
                 settings,
                 model,
                 _mcpClient,
-                conversations);
-
-            _projectIndexer = new ProjectIndexer();
+                _conversations);
+            _agentRunner.Progress += status => Dispatcher.InvokeAsync(() => AgentStatusText.Text = status);
 
             Loaded += MainWindow_Loaded;
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            await InitializeAsync();
+            try
+            {
+                await InitializeAsync();
+            }
+            catch (OperationCanceledException) when (_windowLifetime.IsCancellationRequested) { }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Lavender startup failed",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                Close();
+            }
         }
 
         private async Task InitializeAsync()
         {
-            await FastApiService.Instance.StartServerAsync();
-            await _mcpClient.ConnectAsync();
-            Conversation conversation = await _agentRunner.CreateConversationAsync();
-            _activeConversationId = conversation.Id;
+            await FastApiService.Instance.StartFreshServerAsync(_windowLifetime.Token);
+            await _mcpClient.ConnectAsync(_windowLifetime.Token);
+            _windowLifetime.Token.ThrowIfCancellationRequested();
+            await RestoreProjectChatAsync();
+            _ready = true;
+            AgentStatusText.Text = "Ready";
+            LastProject? previous = await _lastProjectStore.LoadAsync(_windowLifetime.Token);
+            if (previous is not null)
+                await OpenProjectAsync(previous.ProjectPath, previous.SolutionPath);
         }
 
         #endregion
@@ -111,10 +132,17 @@ namespace Lavender.App
 
         protected override void OnClosed(EventArgs e)
         {
-            _projectIndexer.Dispose();
-            _mcpClient.DisposeAsync().AsTask().GetAwaiter().GetResult();
-            FastApiService.Instance.StopServer();
-            base.OnClosed(e);
+            _windowLifetime.Cancel();
+            _activeRun?.Cancel();
+            try
+            {
+                FastApiService.Instance.StopServer();
+            }
+            finally
+            {
+                try { _mcpClient.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+                finally { base.OnClosed(e); }
+            }
         }
 
         #endregion
@@ -128,6 +156,7 @@ namespace Lavender.App
         /// <param name="e"></param>
         private async void SendButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_activeRun is not null) { _activeRun.Cancel(); return; }
             await SendCurrentQueryAsync();
         }
 
@@ -144,6 +173,17 @@ namespace Lavender.App
 
         private async Task SendCurrentQueryAsync()
         {
+            if (!_ready || _busy) return;
+            if (_selectedProjectPath is not null && !_projectIndexed)
+            {
+                AddMessageBubble("Project indexing has not completed. Open the project again to retry; its saved chats are still available.", false);
+                return;
+            }
+            if (_activeConversationId == Guid.Empty)
+            {
+                AddMessageBubble("Choose New chat before sending a message.", false);
+                return;
+            }
             string input = UserInputBox.Text.Trim();
 
             if (string.IsNullOrWhiteSpace(input))
@@ -156,10 +196,12 @@ namespace Lavender.App
 
             try
             {
+                _activeRun = new CancellationTokenSource();
+                SetBusy(true);
                 AgentRunResult result = await _agentRunner.RunAsync(
                     _activeConversationId,
                     input,
-                    BuildProjectContext());
+                    BuildProjectContext(), _activeRun.Token);
 
                 foreach (string diagnostic in result.ToolDiagnostics ?? [])
                 {
@@ -168,9 +210,22 @@ namespace Lavender.App
 
                 AddMessageBubble(result.FinalAnswer, false);
             }
+            catch (OperationCanceledException)
+            {
+                AddMessageBubble("Response cancelled.", false);
+            }
             catch (Exception ex)
             {
                 AddMessageBubble($"Error: {ex.Message}", false);
+            }
+            finally
+            {
+                _activeRun?.Dispose();
+                _activeRun = null;
+                SetBusy(false);
+                AgentStatusText.Text = "Ready";
+                try { await RefreshHistoryAsync(); }
+                catch (Exception ex) { AddMessageBubble($"Could not refresh history: {ex.Message}", false); }
             }
         }
 
@@ -193,9 +248,14 @@ namespace Lavender.App
                 : new Thickness(0, 0, 28, 10),
             };
 
-            TextBlock text = new TextBlock
+            TextBox text = new TextBox
             {
                 Text = message,
+                IsReadOnly = true,
+                IsReadOnlyCaretVisible = true,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
                 Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
                 FontFamily = new FontFamily("Bahnschrift"),
                 FontSize = 12,
@@ -219,9 +279,10 @@ namespace Lavender.App
         /// <param name="e"></param>
         private async void OpenProject_Click(object sender, RoutedEventArgs e)
         {
+            if (!_ready || _busy) return;
             var dialog = new OpenFolderDialog
             {
-                Title = "Select a Unity Project",
+                Title = "Select a project folder",
                 InitialDirectory = GetProjectPickerInitialDirectory()
             };
 
@@ -234,46 +295,189 @@ namespace Lavender.App
             string solutionOrProjectPath;
             try
             {
-                solutionOrProjectPath = FindSolution(selectedPath);
+                solutionOrProjectPath = ProjectFolderResolver.FindSolution(selectedPath);
+                selectedPath = Path.GetDirectoryName(solutionOrProjectPath)!;
             }
             catch (InvalidOperationException err)
             {
-                MessageBox.Show(
-                    err.Message,
-                    "Unable to open project",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                var projectDialog = new OpenFileDialog
+                {
+                    Title = err.Message,
+                    InitialDirectory = selectedPath,
+                    Filter = "C# solutions and projects|*.sln;*.csproj",
+                    CheckFileExists = true
+                };
+                if (projectDialog.ShowDialog() != true) return;
+                solutionOrProjectPath = projectDialog.FileName;
+                selectedPath = Path.GetDirectoryName(solutionOrProjectPath)!;
+            }
+            catch (Exception err) when (err is IOException or UnauthorizedAccessException)
+            {
+                MessageBox.Show(err.Message, "Cannot read project folder");
                 return;
             }
 
-            FolderView.Items.Clear();
+            await OpenProjectAsync(selectedPath, solutionOrProjectPath);
+        }
 
-            TreeViewItem rootItem = BuildDisplayableExplorerDirectory(selectedPath, includeIfEmpty: true)!;
-            FolderView.Items.Add(rootItem);
-            rootItem.IsExpanded = true;
-
-            _projectScanner = new ProjectScanner(selectedPath);
-            _projectSearchService = new ProjectSearchService(_projectScanner);
-            _selectedProjectPath = selectedPath;
-            _selectedSolutionPath = solutionOrProjectPath;
-
+        private async Task OpenProjectAsync(string selectedPath, string solutionOrProjectPath)
+        {
             try
             {
-                await _projectIndexer.IndexProjectAsync(
-                    selectedPath,
-                    solutionOrProjectPath);
-                await _mcpClient.IndexProjectAsync(
-                    selectedPath,
-                    solutionOrProjectPath);
+                SetBusy(true);
+                _projectIndexed = false;
+                FolderView.Items.Clear();
+                TreeViewItem rootItem = BuildDisplayableExplorerDirectory(selectedPath, includeIfEmpty: true)!;
+                FolderView.Items.Add(rootItem);
+                rootItem.IsExpanded = true;
+                _projectScanner = new ProjectScanner(selectedPath);
+                _projectSearchService = new ProjectSearchService(_projectScanner);
+                _selectedProjectPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedPath));
+                _selectedSolutionPath = solutionOrProjectPath;
+                OpenProjectButton.Content = "Change folder";
+                OpenProjectButton.ToolTip = _selectedProjectPath;
+                ConversationPicker.ToolTip = $"Chat history for {_selectedProjectPath}";
+                _activeConversationId = Guid.Empty;
+                ChatMessagesPanel.Children.Clear();
+                contextFiles.Clear();
+                await RestoreProjectChatAsync();
+                AgentStatusText.Text = $"Indexing {Path.GetFileName(selectedPath)}…";
+                await _mcpClient.IndexProjectAsync(selectedPath, solutionOrProjectPath, _windowLifetime.Token);
+                _projectIndexed = true;
+                AgentStatusText.Text = $"Ready — {Path.GetFileName(selectedPath)}";
+                try
+                {
+                    await _lastProjectStore.SaveAsync(selectedPath, solutionOrProjectPath, _windowLifetime.Token);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    AddMessageBubble($"Project opened, but its startup preference could not be saved: {ex.Message}", false);
+                }
             }
+            catch (OperationCanceledException) when (_windowLifetime.IsCancellationRequested) { }
             catch (Exception err)
             {
+                AgentStatusText.Text = "Indexing failed — reopen project to retry";
                 MessageBox.Show(
                     $"Lavender could not index the selected project.{Environment.NewLine}{Environment.NewLine}{err.Message}",
                     "Project indexing failed",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+            finally { SetBusy(false); }
+        }
+
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            SendButton.IsEnabled = !busy || _activeRun is not null;
+            SendButton.Content = _activeRun is not null ? "Stop" : "Send";
+            ConversationPicker.IsEnabled = !busy;
+            NewChatButton.IsEnabled = !busy;
+            ClearHistoryButton.IsEnabled = !busy;
+            OpenProjectButton.IsEnabled = !busy;
+            UserInputBox.IsReadOnly = busy;
+        }
+
+        private async Task RestoreProjectChatAsync()
+        {
+            var history = await _conversations.ListAsync(_selectedProjectPath);
+            Conversation chat = history.FirstOrDefault() ?? await CreateProjectChatAsync();
+            ShowConversation(chat);
+            await RefreshHistoryAsync();
+        }
+
+        private async Task<Conversation> CreateProjectChatAsync()
+        {
+            Conversation chat = await _conversations.CreateAsync();
+            chat.ProjectPath = _selectedProjectPath;
+            chat.SolutionPath = _selectedSolutionPath;
+            await _conversations.SaveAsync(chat);
+            return chat;
+        }
+
+        private void ShowConversation(Conversation chat)
+        {
+            _activeConversationId = chat.Id;
+            contextFiles.Clear();
+            if (_selectedProjectPath is not null)
+                contextFiles.AddRange(chat.ContextFiles.Where(path => File.Exists(path) &&
+                    Path.GetFullPath(path).StartsWith(_selectedProjectPath + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase)));
+            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+            UserInputBox.Clear();
+            ChatMessagesPanel.Children.Clear();
+            foreach (ConversationTurn turn in chat.Turns)
+            {
+                AddMessageBubble(turn.UserMessage, true);
+                if (!string.IsNullOrWhiteSpace(turn.AssistantMessage)) AddMessageBubble(turn.AssistantMessage, false);
+                else AddMessageBubble(turn.StopReason ?? "This response was interrupted. You can ask again.", false);
+            }
+        }
+
+        private async Task RefreshHistoryAsync()
+        {
+            _refreshingHistory = true;
+            try
+            {
+                var history = await _conversations.ListAsync(_selectedProjectPath);
+                ConversationPicker.ItemsSource = history;
+                ConversationPicker.SelectedItem = history.FirstOrDefault(c => c.Id == _activeConversationId);
+            }
+            finally { _refreshingHistory = false; }
+        }
+
+        private async void NewChat_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_ready || _busy) return;
+            try
+            {
+                SetBusy(true);
+                ShowConversation(await CreateProjectChatAsync());
+                await RefreshHistoryAsync();
+            }
+            catch (Exception ex) { AddMessageBubble($"Could not create chat: {ex.Message}", false); }
+            finally { SetBusy(false); }
+        }
+
+        private void ConversationPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_refreshingHistory || _busy || !_ready) return;
+            if (ConversationPicker.SelectedItem is Conversation chat) ShowConversation(chat);
+        }
+
+        private async void ClearContext_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_ready || _busy) return;
+            contextFiles.Clear();
+            await SaveContextFilesAsync();
+        }
+
+        private async void ClearHistory_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_ready || _busy) return;
+            try
+            {
+                SetBusy(true);
+                await _conversations.ClearProjectAsync(_selectedProjectPath);
+                ShowConversation(await CreateProjectChatAsync());
+                await RefreshHistoryAsync();
+            }
+            catch (Exception ex) { AddMessageBubble($"Could not clear history: {ex.Message}", false); }
+            finally { SetBusy(false); }
+        }
+
+        private async Task SaveContextFilesAsync()
+        {
+            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+            try
+            {
+                var chat = await _conversations.LoadAsync(_activeConversationId);
+                if (chat is null) return;
+                chat.ContextFiles = contextFiles.ToList();
+                await _conversations.SaveAsync(chat);
+            }
+            catch (Exception ex) { AddMessageBubble($"Could not save selected files: {ex.Message}", false); }
         }
 
         private string GetProjectPickerInitialDirectory()
@@ -288,30 +492,6 @@ namespace Lavender.App
             }
 
             return Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        }
-
-        private static string FindSolution(string directory)
-        {
-            string? solutionPath = Directory
-                .EnumerateFiles(directory, "*.sln", SearchOption.TopDirectoryOnly)
-                .FirstOrDefault();
-
-            if (solutionPath is not null)
-            {
-                return solutionPath;
-            }
-
-            string[] projectPaths = Directory
-                .EnumerateFiles(directory, "*.csproj", SearchOption.TopDirectoryOnly)
-                .ToArray();
-
-            if (projectPaths.Length == 1)
-            {
-                return projectPaths[0];
-            }
-
-            throw new InvalidOperationException(
-                "The selected folder does not contain a solution or a single project file.");
         }
 
         private string BuildProjectContext()
@@ -562,8 +742,9 @@ namespace Lavender.App
             e.Handled = true;
         }
 
-        private void ChatPanel_Drop(object sender, DragEventArgs e)
+        private async void ChatPanel_Drop(object sender, DragEventArgs e)
         {
+            if (!_ready || _busy || _selectedProjectPath is null) return;
             if (!e.Data.GetDataPresent(DataFormats.StringFormat))
                 return;
 
@@ -575,6 +756,9 @@ namespace Lavender.App
             if (!File.Exists(path))
                 return;
 
+            if (!Path.GetFullPath(path).StartsWith(_selectedProjectPath + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase)) return;
+
             if (!IsDisplayableExplorerFile(path))
                 return;
 
@@ -582,6 +766,7 @@ namespace Lavender.App
                 contextFiles.Add(path);
 
             SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+            await SaveContextFilesAsync();
         }
 
 

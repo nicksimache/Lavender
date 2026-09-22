@@ -1,3 +1,6 @@
+import hashlib
+from pathlib import Path
+
 import lancedb
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -9,6 +12,7 @@ client = OpenAI()
 db = lancedb.connect("./lavender_vectors")
 TABLE_NAME = "code_chunks"
 EMBED_MODEL = "text-embedding-3-small"
+SOURCE_REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest().upper()
 
 
 class CodeChunk(BaseModel):
@@ -43,7 +47,11 @@ def get_embedding(text: str) -> list[float]:
 
 @app.get("/")
 def root():
-    return {"message": "backend server runnning"} 
+    return {
+        "message": "backend server running",
+        "service": "lavender",
+        "source_revision": SOURCE_REVISION,
+    }
 
 @app.post("/embed-project")
 def embed_project(request: EmbedProjectRequest):
@@ -78,10 +86,13 @@ def embed_project(request: EmbedProjectRequest):
 
 @app.post("/search")
 def search(request: SearchRequest):
+    stage = "opening the vector index"
     try:
         table = db.open_table(TABLE_NAME)
+        stage = "creating the query embedding"
         query_vector = get_embedding(request.query)
 
+        stage = "searching the vector index"
         raw_results = (
             table.search(query_vector)
             .distance_type("cosine")
@@ -89,8 +100,9 @@ def search(request: SearchRequest):
             .to_list()
         )
 
-        print(raw_results[:5])
-
+        # This backend runs with redirected output under the desktop app.
+        # Writing debug results to a closed pipe must not break a valid search.
+        stage = "formatting search results"
         results = []
 
         for row in raw_results:
@@ -111,4 +123,7 @@ def search(request: SearchRequest):
             "results": results
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=500,
+            detail=f"Search failed while {stage}: {exc}",
+        ) from exc

@@ -52,7 +52,7 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         await EnsureConnectedAsync(cancellationToken);
-        _tools ??= await _client!.ListToolsAsync(cancellationToken: cancellationToken);
+        _tools = await _client!.ListToolsAsync(cancellationToken: cancellationToken);
 
         return _tools.Select(tool => new McpToolDefinition(
             tool.Name,
@@ -86,17 +86,85 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         string solutionPath,
         CancellationToken cancellationToken = default)
     {
-        await CallToolAsync(
+        string resultJson = await CallToolAsync(
             "lavender_index_project",
             JsonSerializer.Serialize(new { projectPath, solutionPath }),
             cancellationToken);
+
+        using JsonDocument result = JsonDocument.Parse(resultJson);
+        JsonElement root = result.RootElement;
+        if (root.TryGetProperty("isError", out JsonElement isError) &&
+            isError.ValueKind == JsonValueKind.True)
+        {
+            throw new InvalidOperationException($"The indexing tool failed: {resultJson}");
+        }
+
+        if (root.TryGetProperty("structuredContent", out JsonElement structured) &&
+            ValidateIndexResponse(structured))
+        {
+            return;
+        }
+
+        if (root.TryGetProperty("content", out JsonElement content) &&
+            content.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in content.EnumerateArray())
+            {
+                if (!item.TryGetProperty("text", out JsonElement text) ||
+                    text.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    using JsonDocument payload = JsonDocument.Parse(text.GetString()!);
+                    if (ValidateIndexResponse(payload.RootElement))
+                    {
+                        return;
+                    }
+                }
+                catch (JsonException)
+                {
+                    // A text block may contain an explanation instead of JSON.
+                }
+            }
+        }
+
+        throw new InvalidOperationException(
+            "The indexing tool did not confirm successful indexing.");
+    }
+
+    private static bool ValidateIndexResponse(JsonElement payload)
+    {
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !(payload.TryGetProperty("success", out JsonElement success) ||
+              payload.TryGetProperty("Success", out success)))
+        {
+            return false;
+        }
+
+        if (success.ValueKind == JsonValueKind.True)
+        {
+            return true;
+        }
+
+        string? message = null;
+        if ((payload.TryGetProperty("message", out JsonElement detail) ||
+             payload.TryGetProperty("Message", out detail)) &&
+            detail.ValueKind == JsonValueKind.String)
+        {
+            message = detail.GetString();
+        }
+
+        throw new InvalidOperationException(message ?? "Project indexing failed.");
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_client is not null)
         {
-            await _client.DisposeAsync();
+            await _client.DisposeAsync().ConfigureAwait(false);
             _client = null;
             _tools = null;
         }
