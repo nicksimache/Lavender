@@ -84,6 +84,10 @@ namespace Lavender.Core.DataTypes
     /// </summary>
     public class VectorSearchCodeChunk
     {
+        [JsonPropertyName("group_id")]
+        public int GroupId { get; set; }
+        [JsonPropertyName("group_distance")]
+        public double GroupDistance { get; set; }
         [JsonPropertyName("file_path")]
         public string FilePath { get; set; } = "";
 
@@ -121,6 +125,16 @@ namespace Lavender.Core.DataTypes
     /// </summary>
     public class VectorSearchCodeChunk_ObjectRecv
     {
+        [JsonPropertyName("indexing_status")]
+        public string IndexingStatus { get; set; } = "unknown";
+        [JsonPropertyName("indexed_chunks")]
+        public int IndexedChunks { get; set; }
+        [JsonPropertyName("is_partial")]
+        public bool IsPartial { get; set; }
+        [JsonPropertyName("low_confidence")]
+        public bool LowConfidence { get; set; }
+        [JsonPropertyName("indexing_error")]
+        public string? IndexingError { get; set; }
         [JsonPropertyName("results")]
         public List<VectorSearchCodeChunk> Results { get; set; } = new();
     }

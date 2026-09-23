@@ -1,5 +1,7 @@
 using ModelContextProtocol.Client;
 using System.Text.Json;
+using System.Diagnostics;
+using Lavender.Infrastructure.Indexing;
 
 namespace Lavender.Infrastructure.Mcp;
 
@@ -13,6 +15,7 @@ public sealed class LavenderMcpClient : IAsyncDisposable
     private readonly string _workingDirectory;
     private McpClient? _client;
     private IList<McpClientTool>? _tools;
+    public string? LastIndexingSummary { get; private set; }
 
     public LavenderMcpClient(string workingDirectory)
     {
@@ -34,14 +37,43 @@ public sealed class LavenderMcpClient : IAsyncDisposable
                 "Could not locate the Lavender MCP server project.", project);
         }
 
+        // Visual Studio can rebuild the desktop without rebuilding this separate executable.
+        // Build into its own output directory to avoid replacing the running desktop's DLLs.
+        string outputDirectory = Path.Combine(_workingDirectory, "artifacts", "mcp-runtime");
+        var buildInfo = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = _workingDirectory,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (string argument in new[] { "build", project, "--no-restore", "--nologo", "--verbosity", "quiet", "--output", outputDirectory })
+            buildInfo.ArgumentList.Add(argument);
+        using (Process build = Process.Start(buildInfo) ?? throw new InvalidOperationException("Could not build the MCP server."))
+        {
+            Task<string> stdout = build.StandardOutput.ReadToEndAsync();
+            Task<string> stderr = build.StandardError.ReadToEndAsync();
+            try { await build.WaitForExitAsync(cancellationToken).ConfigureAwait(false); }
+            catch (OperationCanceledException)
+            {
+                if (!build.HasExited) build.Kill(entireProcessTree: true);
+                throw;
+            }
+            string diagnostics = (await stdout.ConfigureAwait(false)) + (await stderr.ConfigureAwait(false));
+            if (build.ExitCode != 0)
+                throw new InvalidOperationException($"MCP server build failed. Restore/rebuild the solution and retry.\n{diagnostics}");
+        }
+        var environment = StdioClientTransportOptions.GetDefaultEnvironmentVariables();
+        environment["LAVENDER_INDEX_REPORT_DIRECTORY"] = IndexingTimings.ReportDirectory;
         StdioClientTransport transport = new(new StdioClientTransportOptions
         {
             Name = "Lavender C# Analysis",
             Command = "dotnet",
-            Arguments = ["run", "--no-build", "--project", project],
+            Arguments = [Path.Combine(outputDirectory, "Lavender.McpServer.dll")],
             WorkingDirectory = _workingDirectory,
             InheritEnvironmentVariables = false,
-            EnvironmentVariables = StdioClientTransportOptions.GetDefaultEnvironmentVariables()
+            EnvironmentVariables = environment
         });
 
         _client = await McpClient.CreateAsync(
@@ -135,7 +167,7 @@ public sealed class LavenderMcpClient : IAsyncDisposable
             "The indexing tool did not confirm successful indexing.");
     }
 
-    private static bool ValidateIndexResponse(JsonElement payload)
+    private bool ValidateIndexResponse(JsonElement payload)
     {
         if (payload.ValueKind != JsonValueKind.Object ||
             !(payload.TryGetProperty("success", out JsonElement success) ||
@@ -146,6 +178,9 @@ public sealed class LavenderMcpClient : IAsyncDisposable
 
         if (success.ValueKind == JsonValueKind.True)
         {
+            LastIndexingSummary = (payload.TryGetProperty("message", out JsonElement summary) ||
+                payload.TryGetProperty("Message", out summary)) && summary.ValueKind == JsonValueKind.String
+                ? summary.GetString() : null;
             return true;
         }
 

@@ -9,8 +9,6 @@ namespace Lavender.McpServer.Tools;
 [McpServerToolType]
 public sealed class SemanticSearchTool
 {
-    private const int DefaultTopK = 5;
-    private const int MaxTopK = 25;
     private const int MaxCodeCharacters = 4000;
 
     private readonly LavenderMcpState _state;
@@ -21,39 +19,44 @@ public sealed class SemanticSearchTool
     }
 
     [McpServerTool(Name = "lavender_semantic_search")]
-    [Description("Runs semantic search over the currently indexed C# project. Call lavender_index_project first.")]
+    [Description("Selects the nearest one or two semantic groups by centroid and returns all their chunks, including during indexing. Groups use 25 initial chunk seeds and one assignment/averaging pass. Weak centroid matches wait for more batches. Partial or low-confidence results are marked; use source reading to verify them.")]
     public async Task<SemanticSearchResult> SearchAsync(
         [Description("Natural-language query describing the code to find.")]
         string query,
 
-        [Description("Number of code chunks to return. Defaults to 5 and is capped at 25.")]
-        int topK = DefaultTopK)
+        [Description("Number of nearest groups to return: 1 or 2, default 2. Every chunk in the selected groups is returned.")]
+        int groupCount = 2,
+        [Description("Maximum centroid cosine distance for an early result during indexing. Lower is stricter; default 0.65. This is a heuristic, not a relevance guarantee.")]
+        double maxDistance = 0.65,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
             return SemanticSearchResult.Failed("The semantic search query was not provided.");
         }
 
-        if (!_state.IsProjectIndexed)
-        {
-            await _state.WaitForProjectIndexed();
-        }
+        if (_state.ProjectPath is null)
+            return SemanticSearchResult.Failed("Open a project first.");
+        if (_state.RequiresReindex)
+            return SemanticSearchResult.Failed(_state.NotReadyMessage);
 
-        int boundedTopK = Math.Clamp(topK, 1, MaxTopK);
+        int boundedGroupCount = Math.Clamp(groupCount, 1, 2);
 
         try
         {
             VectorSearchCodeChunk_ObjectRecv response =
-                await FastApiService.Instance.SearchProjectAsync(query.Trim(), boundedTopK);
+                await FastApiService.Instance.SearchProjectAsync(query.Trim(), boundedGroupCount, _state.ProjectPath, _state.IndexId, Math.Clamp(maxDistance, 0, 2), cancellationToken);
 
             SemanticSearchChunk[] chunks = response.Results
-                .Take(boundedTopK)
                 .Select(SemanticSearchChunk.FromVectorSearchCodeChunk)
                 .ToArray();
 
             return new SemanticSearchResult(
                 Success: true,
-                Message: $"Found {chunks.Length} chunk(s).",
+                Message: $"Found {chunks.Length} chunk(s) in {chunks.Select(c => c.GroupId).Distinct().Count()} nearest group(s). Vector index: {response.IndexingStatus}; {response.IndexedChunks} chunks ready. " +
+                    (response.IsPartial ? "Partial index; more chunks may change results. " : "") +
+                    (response.LowConfidence ? "No close match: verify with source reading or try again after indexing. " : "") +
+                    (response.IndexingError is not null ? $"Indexing error: {response.IndexingError}" : ""),
                 Query: query.Trim(),
                 Results: chunks);
         }
@@ -91,6 +94,10 @@ public sealed record SemanticSearchResult(
 }
 
 public sealed record SemanticSearchChunk(
+    [property: JsonPropertyName("group_id")]
+    int GroupId,
+    [property: JsonPropertyName("group_distance")]
+    double GroupDistance,
     [property: JsonPropertyName("file_path")]
     string FilePath,
 
@@ -123,6 +130,8 @@ public sealed record SemanticSearchChunk(
 {
     public static SemanticSearchChunk FromVectorSearchCodeChunk(VectorSearchCodeChunk chunk) =>
         new(
+            GroupId: chunk.GroupId,
+            GroupDistance: chunk.GroupDistance,
             FilePath: chunk.FilePath,
             ChunkType: chunk.ChunkType,
             Namespace: chunk.Namespace,

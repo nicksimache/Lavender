@@ -19,8 +19,9 @@ public sealed class ProjectIndexer : IDisposable
 {
     private IndexedProjectContext? _context;
     public ProjectKnowledgeService? KnowledgeService { get; private set; }
+    public IndexingTimings? LastTimings { get; private set; }
 
-    public async Task IndexProjectAsync(string projectPath, string solutionPath, CancellationToken cancellationToken = default)
+    public async Task IndexProjectAsync(string projectPath, string solutionPath, string indexId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
@@ -38,17 +39,39 @@ public sealed class ProjectIndexer : IDisposable
                 solutionPath);
         }
 
-        List<CodeChunk> chunks = CodeChunkService.GetCodeChunksFromFolder(projectPath);
-        IndexedProjectContext newContext = await IndexedProjectContext.OpenAsync(solutionPath, cancellationToken);
+        var timings = LastTimings = new IndexingTimings(projectPath);
+        KnowledgeService = null;
+        IndexedProjectContext? newContext = null;
         try
         {
+            List<CodeChunk> chunks;
+            using (timings.Stage("Scan and chunk files"))
+                chunks = CodeChunkService.GetCodeChunksFromFolder(projectPath);
+            timings.ChunkCount = chunks.Count;
+            timings.FileCount = chunks.Select(c => c.FilePath).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+            // Publish vector batches before the structural index is ready, so chat can search them.
+            using (timings.Stage("Check backend readiness"))
+                await FastApiService.Instance.StartServerAsync(cancellationToken);
+            using (timings.Stage("Embed HTTP round trip (includes backend work)"))
+                timings.Backend = await FastApiService.Instance.EmbedProjectAsync(chunks, projectPath, indexId, cancellationToken);
+            using (timings.Stage("Load Roslyn workspace"))
+                newContext = await IndexedProjectContext.OpenAsync(solutionPath, cancellationToken);
             var identity = new SymbolIdentityService();
-            SymbolIndex symbols = await new SymbolIndexingService(identity).IndexAsync(newContext, cancellationToken);
+            SymbolIndex symbols;
+            using (timings.Stage("Index symbols (including compilation)"))
+                symbols = await new SymbolIndexingService(identity).IndexAsync(newContext, cancellationToken);
+            timings.SymbolCount = symbols.Symbols.Count;
 
-            CodeRelationshipGraph relationships = await new CodeRelationshipIndexer(identity).IndexAsync(newContext, symbols, cancellationToken);
-            ProjectDependencyGraph dependencies = new ProjectDependencyIndexer().Index(newContext);
+            CodeRelationshipGraph relationships;
+            using (timings.Stage("Build relationship graph"))
+                relationships = await new CodeRelationshipIndexer(identity).IndexAsync(newContext, symbols, cancellationToken);
+            ProjectDependencyGraph dependencies;
+            using (timings.Stage("Build dependency graph"))
+                dependencies = new ProjectDependencyIndexer().Index(newContext);
 
-            var knowledgeService = new ProjectKnowledgeService(
+            ProjectKnowledgeService knowledgeService;
+            using (timings.Stage("Create query services"))
+                knowledgeService = new ProjectKnowledgeService(
                 symbols,
                 new SymbolSourceService(symbols, newContext),
                 relationships,
@@ -56,20 +79,22 @@ public sealed class ProjectIndexer : IDisposable
                 new GitContextService(projectPath),
                 dependencies);
 
-            await FastApiService.Instance.StartServerAsync();
-            await FastApiService.Instance.EmbedProjectAsync(chunks);
-
             // Publish the new index only after both code and vector indexing succeed.
-            IndexedProjectContext? old = _context;
-            _context = newContext;
-            KnowledgeService = knowledgeService;
-            old?.Dispose();
+            using (timings.Stage("Publish index and dispose previous workspace"))
+            {
+                IndexedProjectContext? old = _context;
+                _context = newContext;
+                KnowledgeService = knowledgeService;
+                old?.Dispose();
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            newContext.Dispose();
+            timings.Error = ex.Message;
+            newContext?.Dispose();
             throw;
         }
+        finally { timings.Finish(); }
     }
 
     public void Dispose()

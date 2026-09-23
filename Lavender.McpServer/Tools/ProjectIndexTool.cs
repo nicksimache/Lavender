@@ -54,13 +54,13 @@ public sealed class ProjectIndexTool
 
             return new IndexProjectResult(
                 Success: true,
-                Message: "Project indexed successfully.",
+                Message: _state.TimingSummary ?? "Project indexed successfully.",
                 ProjectPath: _state.ProjectPath,
                 SolutionPath: _state.SolutionPath);
         }
         catch (Exception ex)
         {
-            return IndexProjectResult.Failed($"Project indexing failed: {ex.Message}");
+            return IndexProjectResult.Failed($"Project indexing failed: {ex.Message}\n{_state.TimingSummary}");
         }
     }
 }

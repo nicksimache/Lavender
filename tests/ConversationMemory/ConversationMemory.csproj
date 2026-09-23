@@ -6,6 +6,12 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../src/Lavender.Application/Agent/ToolUseSummary.cs" Link="ToolUseSummary.cs" />
+    <Compile Include="../../src/Lavender.Infrastructure/Git/GitContextService.cs" Link="GitContextService.cs" />
+    <Compile Include="../../Lavender.McpServer/Tools/Editing/FileToolResult.cs" Link="Editing/FileToolResult.cs" />
+    <Compile Include="../../src/Lavender.Infrastructure/FileSystem/ProjectFileEditor.cs" Link="ProjectFileEditor.cs" />
+    <Compile Include="../../src/Lavender.Infrastructure/FileSystem/ProjectFileCreator.cs" Link="ProjectFileCreator.cs" />
+    <Compile Include="../../src/Lavender.Infrastructure/Indexing/IndexingTimings.cs" Link="IndexingTimings.cs" />
     <Compile Include="../../src/Lavender.Infrastructure/FileSystem/LastProjectStore.cs" Link="LastProjectStore.cs" />
     <Compile Include="../../src/Lavender.Infrastructure/FileSystem/ProjectFolderResolver.cs" Link="ProjectFolderResolver.cs" />
     <Compile Include="../../src/Lavender.Infrastructure/FileSystem/ProjectScanner.cs" Link="ProjectScanner.cs" />

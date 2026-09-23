@@ -58,7 +58,8 @@ namespace Lavender.App
         private bool _busy;
         private bool _refreshingHistory;
         private bool _ready;
-        private bool _projectIndexed;
+        private bool _indexing;
+        private (string ProjectPath, string SolutionPath)? _pendingProject;
         private CancellationTokenSource? _activeRun;
         private readonly CancellationTokenSource _windowLifetime = new();
         private readonly LastProjectStore _lastProjectStore = new();
@@ -106,15 +107,28 @@ namespace Lavender.App
 
         private async Task InitializeAsync()
         {
-            await FastApiService.Instance.StartFreshServerAsync(_windowLifetime.Token);
-            await _mcpClient.ConnectAsync(_windowLifetime.Token);
-            _windowLifetime.Token.ThrowIfCancellationRequested();
-            await RestoreProjectChatAsync();
-            _ready = true;
-            AgentStatusText.Text = "Ready";
+            // Paint the loading screen before restoring the explorer and starting services.
+            await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             LastProject? previous = await _lastProjectStore.LoadAsync(_windowLifetime.Token);
             if (previous is not null)
-                await OpenProjectAsync(previous.ProjectPath, previous.SolutionPath);
+                await DisplayProjectAsync(previous.ProjectPath, previous.SolutionPath);
+            else
+                await RestoreProjectChatAsync();
+            AgentStatusText.Text = "Starting backend…";
+            StartupStatusText.Text = "Starting backend server…";
+            await FastApiService.Instance.StartFreshServerAsync(_windowLifetime.Token);
+            AgentStatusText.Text = "Connecting tools…";
+            StartupStatusText.Text = "Connecting MCP tools…";
+            await _mcpClient.ConnectAsync(_windowLifetime.Token);
+            _windowLifetime.Token.ThrowIfCancellationRequested();
+            _ready = true;
+            AgentStatusText.Text = "Ready";
+            WorkspaceContent.Visibility = Visibility.Visible;
+            StartupOverlay.Visibility = Visibility.Collapsed;
+            if (_pendingProject is not null)
+                await OpenPendingProjectAsync();
+            else if (previous is not null)
+                await OpenProjectAsync(previous.ProjectPath, previous.SolutionPath, alreadyDisplayed: true);
         }
 
         #endregion
@@ -174,11 +188,6 @@ namespace Lavender.App
         private async Task SendCurrentQueryAsync()
         {
             if (!_ready || _busy) return;
-            if (_selectedProjectPath is not null && !_projectIndexed)
-            {
-                AddMessageBubble("Project indexing has not completed. Open the project again to retry; its saved chats are still available.", false);
-                return;
-            }
             if (_activeConversationId == Guid.Empty)
             {
                 AddMessageBubble("Choose New chat before sending a message.", false);
@@ -209,6 +218,23 @@ namespace Lavender.App
                 }
 
                 AddMessageBubble(result.FinalAnswer, false);
+                if (result.ProjectFilesChanged && _selectedProjectPath is not null)
+                {
+                    FolderView.Items.Clear();
+                    TreeViewItem? root = BuildDisplayableExplorerDirectory(_selectedProjectPath, includeIfEmpty: true);
+                    if (root is not null) { FolderView.Items.Add(root); root.IsExpanded = true; }
+                    if (currSelectedFile is not null)
+                    {
+                        if (File.Exists(currSelectedFile)) ShowCodeInPreview(await File.ReadAllTextAsync(currSelectedFile));
+                        else
+                        {
+                            currSelectedFile = null;
+                            PreviewFileNameText.Text = "No file selected";
+                            FilePreviewBox.Document.Blocks.Clear();
+                        }
+                    }
+                    if (contextFiles.RemoveAll(path => !File.Exists(path)) > 0) await SaveContextFilesAsync();
+                }
             }
             catch (OperationCanceledException)
             {
@@ -223,9 +249,10 @@ namespace Lavender.App
                 _activeRun?.Dispose();
                 _activeRun = null;
                 SetBusy(false);
-                AgentStatusText.Text = "Ready";
+                AgentStatusText.Text = _indexing ? "Indexing — chat available" : "Ready";
                 try { await RefreshHistoryAsync(); }
                 catch (Exception ex) { AddMessageBubble($"Could not refresh history: {ex.Message}", false); }
+                await OpenPendingProjectAsync();
             }
         }
 
@@ -279,14 +306,13 @@ namespace Lavender.App
         /// <param name="e"></param>
         private async void OpenProject_Click(object sender, RoutedEventArgs e)
         {
-            if (!_ready || _busy) return;
             var dialog = new OpenFolderDialog
             {
                 Title = "Select a project folder",
                 InitialDirectory = GetProjectPickerInitialDirectory()
             };
 
-            if (dialog.ShowDialog() != true)
+            if (dialog.ShowDialog(this) != true)
             {
                 return;
             }
@@ -307,7 +333,7 @@ namespace Lavender.App
                     Filter = "C# solutions and projects|*.sln;*.csproj",
                     CheckFileExists = true
                 };
-                if (projectDialog.ShowDialog() != true) return;
+                if (projectDialog.ShowDialog(this) != true) return;
                 solutionOrProjectPath = projectDialog.FileName;
                 selectedPath = Path.GetDirectoryName(solutionOrProjectPath)!;
             }
@@ -317,42 +343,77 @@ namespace Lavender.App
                 return;
             }
 
+            if (!_ready || _busy || _indexing)
+            {
+                _pendingProject = (selectedPath, solutionOrProjectPath);
+                OpenProjectButton.Content = "Folder queued…";
+                OpenProjectButton.ToolTip = $"Will open {selectedPath} when the current operation finishes. Click to choose another folder.";
+                AgentStatusText.Text = $"Queued: {Path.GetFileName(selectedPath)}";
+                return;
+            }
             await OpenProjectAsync(selectedPath, solutionOrProjectPath);
         }
 
-        private async Task OpenProjectAsync(string selectedPath, string solutionOrProjectPath)
+        private async Task OpenPendingProjectAsync()
         {
+            if (!_ready || _busy || _indexing || _windowLifetime.IsCancellationRequested || _pendingProject is null) return;
+            var pending = _pendingProject.Value;
+            _pendingProject = null;
+            await OpenProjectAsync(pending.ProjectPath, pending.SolutionPath);
+        }
+
+        private async Task DisplayProjectAsync(string selectedPath, string solutionOrProjectPath)
+        {
+            if (!Directory.Exists(selectedPath) || !File.Exists(solutionOrProjectPath))
+                throw new IOException("The selected project folder or solution no longer exists.");
+
+            _selectedProjectPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedPath));
+            _selectedSolutionPath = solutionOrProjectPath;
+            // Remember the selection even if indexing fails or the app closes during indexing.
+            string? preferenceError = null;
+            try
+            {
+                await _lastProjectStore.SaveAsync(selectedPath, solutionOrProjectPath, _windowLifetime.Token);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                preferenceError = ex.Message;
+            }
+
+            FolderView.Items.Clear();
+            TreeViewItem rootItem = BuildDisplayableExplorerDirectory(selectedPath, includeIfEmpty: true)!;
+            FolderView.Items.Add(rootItem);
+            rootItem.IsExpanded = true;
+            _projectScanner = new ProjectScanner(selectedPath);
+            _projectSearchService = new ProjectSearchService(_projectScanner);
+            OpenProjectButton.Content = "Change folder";
+            OpenProjectButton.ToolTip = _selectedProjectPath;
+            ConversationPicker.ToolTip = $"Chat history for {_selectedProjectPath}";
+            _activeConversationId = Guid.Empty;
+            ChatMessagesPanel.Children.Clear();
+            contextFiles.Clear();
+            await RestoreProjectChatAsync();
+            if (preferenceError is not null)
+                AddMessageBubble($"Project opened, but its startup preference could not be saved: {preferenceError}", false);
+        }
+
+        private async Task OpenProjectAsync(string selectedPath, string solutionOrProjectPath, bool alreadyDisplayed = false)
+        {
+            bool chatReleased = false;
             try
             {
                 SetBusy(true);
-                _projectIndexed = false;
-                FolderView.Items.Clear();
-                TreeViewItem rootItem = BuildDisplayableExplorerDirectory(selectedPath, includeIfEmpty: true)!;
-                FolderView.Items.Add(rootItem);
-                rootItem.IsExpanded = true;
-                _projectScanner = new ProjectScanner(selectedPath);
-                _projectSearchService = new ProjectSearchService(_projectScanner);
-                _selectedProjectPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedPath));
-                _selectedSolutionPath = solutionOrProjectPath;
-                OpenProjectButton.Content = "Change folder";
-                OpenProjectButton.ToolTip = _selectedProjectPath;
-                ConversationPicker.ToolTip = $"Chat history for {_selectedProjectPath}";
-                _activeConversationId = Guid.Empty;
-                ChatMessagesPanel.Children.Clear();
-                contextFiles.Clear();
-                await RestoreProjectChatAsync();
-                AgentStatusText.Text = $"Indexing {Path.GetFileName(selectedPath)}…";
-                await _mcpClient.IndexProjectAsync(selectedPath, solutionOrProjectPath, _windowLifetime.Token);
-                _projectIndexed = true;
-                AgentStatusText.Text = $"Ready — {Path.GetFileName(selectedPath)}";
-                try
-                {
-                    await _lastProjectStore.SaveAsync(selectedPath, solutionOrProjectPath, _windowLifetime.Token);
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    AddMessageBubble($"Project opened, but its startup preference could not be saved: {ex.Message}", false);
-                }
+                _indexing = true;
+                if (!alreadyDisplayed)
+                    await DisplayProjectAsync(selectedPath, solutionOrProjectPath);
+                AgentStatusText.Text = $"Indexing {Path.GetFileName(selectedPath)} — chat available";
+                Task indexing = _mcpClient.IndexProjectAsync(selectedPath, solutionOrProjectPath, _windowLifetime.Token);
+                SetBusy(false);
+                chatReleased = true;
+                await indexing;
+                if (!string.IsNullOrWhiteSpace(_mcpClient.LastIndexingSummary))
+                    AddMessageBubble(_mcpClient.LastIndexingSummary, false);
+                if (_activeRun is null) AgentStatusText.Text = $"Ready — {Path.GetFileName(selectedPath)}";
             }
             catch (OperationCanceledException) when (_windowLifetime.IsCancellationRequested) { }
             catch (Exception err)
@@ -364,7 +425,13 @@ namespace Lavender.App
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
-            finally { SetBusy(false); }
+            finally
+            {
+                _indexing = false;
+                // Index completion must not unlock controls owned by an active chat/history operation.
+                if (!chatReleased) SetBusy(false);
+                await OpenPendingProjectAsync();
+            }
         }
 
         private void SetBusy(bool busy)
@@ -375,7 +442,7 @@ namespace Lavender.App
             ConversationPicker.IsEnabled = !busy;
             NewChatButton.IsEnabled = !busy;
             ClearHistoryButton.IsEnabled = !busy;
-            OpenProjectButton.IsEnabled = !busy;
+            OpenProjectButton.IsEnabled = true;
             UserInputBox.IsReadOnly = busy;
         }
 
@@ -437,7 +504,7 @@ namespace Lavender.App
                 await RefreshHistoryAsync();
             }
             catch (Exception ex) { AddMessageBubble($"Could not create chat: {ex.Message}", false); }
-            finally { SetBusy(false); }
+            finally { SetBusy(false); await OpenPendingProjectAsync(); }
         }
 
         private void ConversationPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -464,7 +531,24 @@ namespace Lavender.App
                 await RefreshHistoryAsync();
             }
             catch (Exception ex) { AddMessageBubble($"Could not clear history: {ex.Message}", false); }
-            finally { SetBusy(false); }
+            finally { SetBusy(false); await OpenPendingProjectAsync(); }
+        }
+
+        private void OpenTimings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string directory = IndexingTimings.ReportDirectory;
+                Directory.CreateDirectory(directory);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(directory)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Reports folder: {IndexingTimings.ReportDirectory}\n{ex.Message}", "Indexing timings");
+            }
         }
 
         private async Task SaveContextFilesAsync()

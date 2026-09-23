@@ -41,6 +41,8 @@ public sealed class ToolExecutionRecord
     public required string ArgumentsJson { get; init; }
     public string? ResultJson { get; set; }
     public string? Error { get; set; }
+    public string? Outcome { get; set; }
+    public string? OutcomeMessage { get; set; }
     public bool WasBlockedAsRepeat { get; set; }
     public required DateTimeOffset StartedAt { get; init; }
     public DateTimeOffset? CompletedAt { get; set; }
@@ -61,7 +63,8 @@ public sealed record AgentRunResult(
     int Iterations,
     int ToolCalls,
     string? StopReason = null,
-    IReadOnlyList<string>? ToolDiagnostics = null);
+    IReadOnlyList<string>? ToolDiagnostics = null,
+    bool ProjectFilesChanged = false);
 
 public interface IConversationStore
 {

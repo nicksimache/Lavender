@@ -11,7 +11,7 @@ namespace Lavender.App.Converters
     {
         public static HeaderToImageConverter Instance = new HeaderToImageConverter();
 
-        private readonly string csIcon = "/src/Lavender.App/Assets/Images/C_Sharp_Logo_2023.png";
+        private readonly string csIcon = "/src/Lavender.App/Assets/Images/csharp_file_icon.png";
         private readonly string fileIcon = "";
 
         public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)

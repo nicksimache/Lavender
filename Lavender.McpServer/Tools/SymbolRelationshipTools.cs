@@ -56,7 +56,7 @@ public sealed class SymbolRelationshipTools
         if (!_state.IsProjectIndexed)
         {
             return RelationshipToolResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
+                _state.NotReadyMessage);
         }
 
         try

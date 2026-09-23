@@ -36,7 +36,7 @@ public sealed class FindSymbolsTool
         if (!_state.IsProjectIndexed)
         {
             return FindSymbolsResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
+                _state.NotReadyMessage);
         }
 
         int boundedLimit = Math.Clamp(limit, 1, MaxLimit);

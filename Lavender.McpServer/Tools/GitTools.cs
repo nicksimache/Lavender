@@ -1,5 +1,5 @@
 using Lavender.Git;
-using Lavender.Infrastructure.Knowledge;
+using System.Diagnostics;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
@@ -19,19 +19,16 @@ public sealed class GitTools
     }
 
     [McpServerTool(Name = "lavender_get_git_status")]
-    [Description("Gets git repository status for the currently indexed project. Call lavender_index_project first.")]
+    [Description("Gets Git status for the selected project. Available while indexing; no semantic or Roslyn index is required.")]
     public async Task<GitStatusToolResult> GetGitStatusAsync(
         CancellationToken cancellationToken = default)
     {
-        if (!_state.IsProjectIndexed)
-        {
-            await _state.WaitForProjectIndexed();
-        }
+        if (_state.ProjectPath is not string projectPath)
+            return GitStatusToolResult.Failed("Open a project first.");
 
         try
         {
-            IProjectKnowledgeService knowledge = _state.RequireKnowledgeService();
-            GitRepositoryStatus status = await knowledge.GetGitStatusAsync(cancellationToken);
+            GitRepositoryStatus status = await new GitContextService(projectPath).GetStatusAsync(cancellationToken);
 
             return new GitStatusToolResult(
                 Success: status.Error is null,
@@ -45,9 +42,9 @@ public sealed class GitTools
     }
 
     [McpServerTool(Name = "lavender_get_git_diff")]
-    [Description("Gets a git diff for the currently indexed project. Call lavender_index_project first.")]
+    [Description("Gets a Git diff for the selected project, including while indexing. No semantic or Roslyn index is required. Untracked files do not appear in Git diff; use Git status and source reading for those.")]
     public async Task<GitDiffToolResult> GetGitDiffAsync(
-        [Description("Optional relative file path to diff. Leave empty for the whole repository.")]
+        [Description("Optional relative file path to diff. Empty returns a project diff excluding generated folders (bin, obj, .vs, artifacts, .venv, node_modules). Specify a file explicitly to inspect it even in those folders.")]
         string? relativeFilePath = null,
 
         [Description("Whether to return the staged diff instead of the working tree diff.")]
@@ -55,29 +52,30 @@ public sealed class GitTools
 
         CancellationToken cancellationToken = default)
     {
-        if (!_state.IsProjectIndexed)
-        {
-            return GitDiffToolResult.Failed(
-                "No project is indexed. Call lavender_index_project first.");
-        }
+        if (_state.ProjectPath is not string projectPath)
+            return GitDiffToolResult.Failed("Open a project first.");
 
+        var elapsed = Stopwatch.StartNew();
         try
         {
-            IProjectKnowledgeService knowledge = _state.RequireKnowledgeService();
+            var git = new GitContextService(projectPath);
             string? normalizedPath = string.IsNullOrWhiteSpace(relativeFilePath)
                 ? null
                 : relativeFilePath.Trim();
 
-            GitDiffResult diff = await knowledge.GetGitDiffAsync(normalizedPath, staged, cancellationToken);
+            GitDiffResult diff = staged
+                ? await git.GetStagedDiffAsync(normalizedPath, cancellationToken)
+                : await git.GetWorkingTreeDiffAsync(normalizedPath, cancellationToken);
 
             return new GitDiffToolResult(
                 Success: diff.Succeeded,
-                Message: diff.Error ?? "Git diff loaded.",
+                Message: diff.Error ?? $"Git diff loaded in {elapsed.Elapsed.TotalSeconds:F2}s." +
+                    (normalizedPath is null ? " Generated folders were excluded; specify a file path to inspect one explicitly." : ""),
                 Diff: GitDiffSummary.FromGitDiffResult(diff));
         }
         catch (Exception ex)
         {
-            return GitDiffToolResult.Failed($"Getting git diff failed: {ex.Message}");
+            return GitDiffToolResult.Failed($"Getting Git diff failed after {elapsed.Elapsed.TotalSeconds:F2}s: {ex.Message}");
         }
     }
 

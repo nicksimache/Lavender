@@ -275,6 +275,8 @@
     </Window.Resources>
 
     <Grid Background="{StaticResource AppBackground}">
+    <Grid x:Name="WorkspaceContent" Visibility="Collapsed"
+          Background="{StaticResource AppBackground}">
         <Grid.RowDefinitions>
             <RowDefinition Height="35"/>
             <RowDefinition Height="*"/>
@@ -502,6 +504,8 @@
                                       ToolTip="Saved conversations for the open project"/>
                         </DockPanel>
                         <DockPanel Grid.Row="1" Margin="0,0,0,4">
+                            <Button DockPanel.Dock="Right" Content="Timings" Padding="4,1" FontSize="10"
+                                    Click="OpenTimings_Click" ToolTip="Open the indexing timing reports folder"/>
                             <Button x:Name="ClearHistoryButton" DockPanel.Dock="Right" Content="Dev: Clear history"
                                     Padding="4,1" FontSize="10" Click="ClearHistory_Click"
                                     ToolTip="Delete all saved chats and memory for the current project only"/>
@@ -592,5 +596,48 @@
                 </StackPanel>
             </Grid>
         </Border>
+    </Grid>
+        <Grid x:Name="StartupOverlay" Background="{StaticResource AppBackground}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid Width="48" Height="48" Margin="0,0,0,24"
+                      AutomationProperties.Name="Starting Lavender">
+                    <Ellipse Stroke="#332A46" StrokeThickness="4" Margin="4"/>
+                    <Path Data="M 24,4 A 20,20 0 0 1 44,24"
+                          Stroke="{StaticResource AccentBrush}" StrokeThickness="4"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <RotateTransform/>
+                        </Path.RenderTransform>
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Style.Triggers>
+                                    <Trigger Property="IsVisible" Value="True">
+                                        <Trigger.EnterActions>
+                                            <BeginStoryboard x:Name="StartupSpin">
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                                                                     From="0" To="360" Duration="0:0:1"
+                                                                     RepeatBehavior="Forever"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </Trigger.EnterActions>
+                                        <Trigger.ExitActions>
+                                            <StopStoryboard BeginStoryboardName="StartupSpin"/>
+                                        </Trigger.ExitActions>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+                </Grid>
+                <TextBlock Text="Lavender" FontSize="26" HorizontalAlignment="Center"
+                           Foreground="{StaticResource PrimaryTextBrush}" Margin="0,0,0,10"/>
+                <TextBlock x:Name="StartupStatusText" Text="Restoring your project…"
+                           FontSize="13" HorizontalAlignment="Center"
+                           Foreground="{StaticResource MutedTextBrush}"
+                           AutomationProperties.LiveSetting="Polite"/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </Window>

@@ -238,31 +238,39 @@ namespace Lavender.Infrastructure.Backend
             return Directory.GetCurrentDirectory();
         }
 
-        public async Task EmbedProjectAsync(List<CodeChunk> chunks)
+        public async Task<JsonElement?> EmbedProjectAsync(List<CodeChunk> chunks, string projectPath, string indexId, CancellationToken cancellationToken = default)
         {
             var request = new
             {
-                chunks = chunks.Select(chunk => CodeChunk_ToPython.ToPythonChunk(chunk))
+                chunks = chunks.Select(chunk => CodeChunk_ToPython.ToPythonChunk(chunk)),
+                project_path = projectPath,
+                index_id = indexId
             };
 
-            HttpResponseMessage response =
+            using HttpResponseMessage response =
                 await httpClient.PostAsJsonAsync(
                     "embed-project",
-                    request);
+                    request, cancellationToken);
 
             await EnsureSuccessWithBodyAsync(response);
+            using JsonDocument? result = await response.Content.ReadFromJsonAsync<JsonDocument>();
+            return result is not null && result.RootElement.TryGetProperty("timings", out JsonElement timings)
+                ? timings.Clone() : null;
         }
 
-        public async Task<VectorSearchCodeChunk_ObjectRecv> SearchProjectAsync(string query, int topK)
+        public async Task<VectorSearchCodeChunk_ObjectRecv> SearchProjectAsync(string query, int groupCount, string projectPath, string indexId, double maxDistance = 0.65, CancellationToken cancellationToken = default)
         {
             var request = new
             {
                 query,
-                top_k = topK
+                group_count = groupCount,
+                project_path = projectPath,
+                index_id = indexId,
+                max_distance = maxDistance
             };
 
-            HttpResponseMessage response =
-                await httpClient.PostAsJsonAsync("search", request);
+            using HttpResponseMessage response =
+                await httpClient.PostAsJsonAsync("search", request, cancellationToken);
 
             await EnsureSuccessWithBodyAsync(response);
 

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Text.Json;
 
 namespace Lavender.Git;
 
@@ -52,12 +53,15 @@ public sealed class GitCommitInfo
 public sealed class GitContextService
 {
     private readonly string _workingDirectory;
+    private readonly string _diagnosticsDirectory;
 
-    public GitContextService(string selectedPath)
+    public GitContextService(string selectedPath, string? diagnosticsDirectory = null)
     {
         _workingDirectory = Directory.Exists(selectedPath)
             ? selectedPath
             : Path.GetDirectoryName(selectedPath) ?? selectedPath;
+        _diagnosticsDirectory = diagnosticsDirectory ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lavender", "Diagnostics", "Git");
     }
 
     public async Task<GitRepositoryStatus> GetStatusAsync(CancellationToken token = default)
@@ -90,7 +94,7 @@ public sealed class GitContextService
 
     private async Task<GitDiffResult> GetDiffAsync(bool staged, string? file, CancellationToken token)
     {
-        var args = new List<string> { "diff" };
+        var args = new List<string> { "diff", "--no-ext-diff", "--no-textconv", "--no-color" };
 
         if (staged)
         {
@@ -99,8 +103,20 @@ public sealed class GitContextService
 
         if (file is not null)
         {
+            string fullPath = Path.GetFullPath(Path.Combine(_workingDirectory, file));
+            string relative = Path.GetRelativePath(Path.GetFullPath(_workingDirectory), fullPath);
+            if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar))
+                throw new ArgumentException("The requested diff path is outside the selected project.");
             args.Add("--");
-            args.Add(file);
+            args.Add(":(literal)" + relative.Replace('\\', '/'));
+        }
+        else
+        {
+            // These folders can be tracked despite .gitignore and churn while Lavender/VS run.
+            args.Add("--");
+            args.Add(".");
+            foreach (string folder in new[] { "bin", "obj", ".vs", "artifacts", ".venv", "node_modules" })
+                args.Add($":(exclude,glob)**/{folder}/**");
         }
 
         CommandResult command = await RunAsync(args, token);
@@ -182,30 +198,107 @@ public sealed class GitContextService
 
     private async Task<CommandResult> RunAsync(IEnumerable<string> args, CancellationToken token)
     {
-        var psi = new ProcessStartInfo("git") { WorkingDirectory = _workingDirectory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, CreateNoWindow = true };
-        foreach (string arg in args)
+        string[] arguments = args.ToArray();
+        string executable = ResolveGitExecutable();
+        string command = "git --no-pager " + string.Join(" ", arguments.Select(a => JsonSerializer.Serialize(a)));
+        string? diagnosticPath = null;
+        string? tracePath = null;
+        try
+        {
+            Directory.CreateDirectory(_diagnosticsDirectory);
+            string id = $"{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}";
+            diagnosticPath = Path.Combine(_diagnosticsDirectory, id + ".json");
+            tracePath = Path.Combine(_diagnosticsDirectory, id + ".trace.jsonl");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        var stopwatch = Stopwatch.StartNew();
+        void Report(string status, int? exitCode, string stdout, string stderr)
+        {
+            if (diagnosticPath is null) return;
+            try
+            {
+                File.WriteAllText(diagnosticPath, JsonSerializer.Serialize(new
+                {
+                    Command = command, Executable = executable, WorkingDirectory = _workingDirectory, Status = status,
+                    ElapsedMilliseconds = stopwatch.Elapsed.TotalMilliseconds, ExitCode = exitCode,
+                    OutputCharacters = stdout.Length, Error = stderr[..Math.Min(stderr.Length, 8000)],
+                    TracePath = tracePath
+                }, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+        var psi = new ProcessStartInfo(executable) { WorkingDirectory = _workingDirectory,
+            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
+            UseShellExecute = false, CreateNoWindow = true };
+        psi.ArgumentList.Add("--no-pager");
+        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        psi.Environment["GIT_OPTIONAL_LOCKS"] = "0";
+        if (tracePath is not null) psi.Environment["GIT_TRACE2_EVENT"] = tracePath.Replace('\\', '/');
+        foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);
         }
 
         using var process = new Process { StartInfo = psi };
+        Report("Starting", null, "", "");
         try
         {
             if (!process.Start())
             {
                 return new(-1, "", "", "Git failed to start.");
             }
+            // Git commands here never consume stdin. Do not inherit the live MCP protocol pipe.
+            process.StandardInput.Close();
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
         {
+            Report("Start failed", null, "", ex.Message);
             return new(-1, "", "", ex.Message);
         }
 
-        Task<string> output = process.StandardOutput.ReadToEndAsync(token);
-        Task<string> error = process.StandardError.ReadToEndAsync(token);
-
-        await process.WaitForExitAsync(token);
+        Task<string> output = process.StandardOutput.ReadToEndAsync();
+        Task<string> error = process.StandardError.ReadToEndAsync();
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
+        deadline.CancelAfter(TimeSpan.FromSeconds(10));
+        try { await process.WaitForExitAsync(deadline.Token); }
+        catch (OperationCanceledException)
+        {
+            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }
+            await process.WaitForExitAsync(CancellationToken.None);
+            await Task.WhenAll(output, error);
+            Report(token.IsCancellationRequested ? "Cancelled" : "Timed out", process.ExitCode, await output, await error);
+            token.ThrowIfCancellationRequested();
+            throw new TimeoutException($"{command} exceeded 10 seconds in '{_workingDirectory}' and was terminated. " +
+                (diagnosticPath is null ? "Could not create a diagnostics file." : $"Diagnostics: {diagnosticPath}"));
+        }
+        Report("Exited", process.ExitCode, await output, await error);
         return new(process.ExitCode, await output, await error, null);
+    }
+
+    internal static string ResolveGitExecutable(string? searchPath = null)
+    {
+        if (!OperatingSystem.IsWindows()) return "git";
+        foreach (string entry in (searchPath ?? Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+        {
+            string directory = Environment.ExpandEnvironmentVariables(entry.Trim().Trim('"'));
+            if (!Path.IsPathRooted(directory)) continue;
+            string candidate = Path.Combine(directory, "git.exe");
+            if (!File.Exists(candidate)) continue;
+            // cmd/git.exe is Git for Windows' launcher. Invoke the real binary directly in
+            // detached MCP processes; it can otherwise stall before Git initializes tracing.
+            if (Path.GetFileName(Path.TrimEndingDirectorySeparator(directory)).Equals("cmd", StringComparison.OrdinalIgnoreCase))
+            {
+                string installation = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(directory))!;
+                foreach (string architecture in new[] { "mingw64", "mingw32" })
+                {
+                    string binary = Path.Combine(installation, architecture, "bin", "git.exe");
+                    if (File.Exists(binary)) return binary;
+                }
+            }
+            return candidate;
+        }
+        return "git";
     }
 
     private sealed record CommandResult(int ExitCode, string Output, string Error, string? StartError);
