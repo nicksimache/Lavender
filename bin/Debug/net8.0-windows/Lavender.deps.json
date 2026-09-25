@@ -8,6 +8,7 @@
     ".NETCoreApp,Version=v8.0": {
       "Lavender/1.0.0": {
         "dependencies": {
+          "AvalonEdit": "6.3.1.120",
           "Microsoft.Build.Framework": "17.11.48",
           "Microsoft.Build.Locator": "1.11.2",
           "Microsoft.CodeAnalysis.CSharp": "5.6.0",
@@ -20,6 +21,14 @@
         },
         "runtime": {
           "Lavender.dll": {}
+        }
+      },
+      "AvalonEdit/6.3.1.120": {
+        "runtime": {
+          "lib/net8.0-windows7.0/ICSharpCode.AvalonEdit.dll": {
+            "assemblyVersion": "6.3.1.120",
+            "fileVersion": "6.3.1.120"
+          }
         }
       },
       "Google.Protobuf/3.30.2": {
@@ -764,6 +773,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "AvalonEdit/6.3.1.120": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-6ASBKPzAg64BLDlFOJo4Ypr1sA/6hB5+TfHLJaZYUSTE0jgxvKlVqKeo/ISTG9qEMxu604qUu6BGugmJkfdrNw==",
+      "path": "avalonedit/6.3.1.120",
+      "hashPath": "avalonedit.6.3.1.120.nupkg.sha512"
     },
     "Google.Protobuf/3.30.2": {
       "type": "package",

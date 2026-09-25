@@ -1,4 +1,4 @@
-﻿using Lavender.App.Rendering;
+using Lavender.App.Rendering;
 using Lavender.Application.Agent;
 using Lavender.Infrastructure.AI;
 using Lavender.Infrastructure.Backend;
@@ -26,7 +26,7 @@ namespace Lavender.App
     /// </summary>
     public partial class MainWindow : Window
     {
-        private bool isHighlighting = false;
+
         private string? currSelectedFile;
         private string? _selectedProjectPath;
         private string? _selectedSolutionPath;
@@ -74,6 +74,7 @@ namespace Lavender.App
         public MainWindow()
         {
             InitializeComponent();
+            ConfigureCodeEditor();
 
             AgentSettings settings = AgentSettings.Load();
             settings.Validate();
@@ -230,7 +231,7 @@ namespace Lavender.App
                         {
                             currSelectedFile = null;
                             PreviewFileNameText.Text = "No file selected";
-                            FilePreviewBox.Document.Blocks.Clear();
+                            FilePreviewBox.Clear();
                         }
                     }
                     if (contextFiles.RemoveAll(path => !File.Exists(path)) > 0) await SaveContextFilesAsync();
@@ -765,40 +766,39 @@ namespace Lavender.App
             }
         }
 
-        private void FilePreviewBox_TextChanged(object sender, TextChangedEventArgs e)
+        private void ConfigureCodeEditor()
         {
-            if (isHighlighting)
-                return;
-
-            // Do not rebuild the FlowDocument while typing: it resets the caret,
-            // selection, scroll position and undo history. Highlight on file load.
+            FilePreviewBox.Options.HighlightCurrentLine = true;
+            FilePreviewBox.TextArea.TextView.CurrentLineBackground =
+                new SolidColorBrush(Color.FromRgb(21, 21, 21));
+            FilePreviewBox.TextArea.TextView.CurrentLineBorder = new Pen(Brushes.Transparent, 0);
+            FilePreviewBox.TextArea.SelectionBorder = new Pen(Brushes.Transparent, 0);
+            FilePreviewBox.TextArea.SelectionBrush = new SolidColorBrush(Color.FromRgb(58, 45, 76));
+            FilePreviewBox.TextArea.SelectionForeground = Brushes.White;
         }
 
         private void ShowCodeInPreview(string code)
         {
-            isHighlighting = true;
-
-            try
+            // Replacing text is only for opening/reloading a file, never for typing.
+            var definition = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance
+                .GetDefinitionByExtension(Path.GetExtension(currSelectedFile ?? ""));
+            if (definition != null)
             {
-                var spans = SyntaxHighlighter.HighlightCSharpCode(code);
-                RichTextBoxRenderer.Render(FilePreviewBox, spans);
+                foreach (var color in definition.NamedHighlightingColors)
+                {
+                    string name = color.Name ?? "";
+                    string hex = name.Contains("Comment", StringComparison.OrdinalIgnoreCase) ? "#6A9955"
+                        : name.Contains("String", StringComparison.OrdinalIgnoreCase) || name.Contains("Char", StringComparison.OrdinalIgnoreCase) ? "#CE9178"
+                        : name.Contains("Number", StringComparison.OrdinalIgnoreCase) || name.Contains("Digit", StringComparison.OrdinalIgnoreCase) ? "#B5CEA8"
+                        : name.Contains("Keyword", StringComparison.OrdinalIgnoreCase) ? "#C084FC"
+                        : "#D4D4D4";
+                    color.Foreground = new ICSharpCode.AvalonEdit.Highlighting.SimpleHighlightingBrush(
+                        (Color)ColorConverter.ConvertFromString(hex));
+                }
             }
-            finally { isHighlighting = false; }
+            FilePreviewBox.SyntaxHighlighting = definition;
+            FilePreviewBox.Text = code;
         }
-
-        private void HighlightCurrentDocument()
-        {
-            if (isHighlighting)
-                return;
-
-            string code = new TextRange(
-                FilePreviewBox.Document.ContentStart,
-                FilePreviewBox.Document.ContentEnd
-            ).Text;
-
-            ShowCodeInPreview(code);
-        }
-
         private void FolderView_PreviewMouseMove(object sender, MouseEventArgs e)
         {
             if (e.LeftButton != MouseButtonState.Pressed)
@@ -861,3 +861,4 @@ namespace Lavender.App
 
     }
 }
+

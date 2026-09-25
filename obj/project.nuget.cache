@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "/AIQ+6sbEHUMloLF9QL0WNSWboAB9o03Y7kpiVFXenHpvXxEb32cTZm6YhI6fweXkGUeNRSCNJMEQB7+JsEk6w==",
+  "dgSpecHash": "CVSHWncraz6iPOVxkGL/QHTVH9XAG1s05lZfzR5p81gv0Yt3ydklNW0RNP7ui98R4danTJCj+vaWGeWnTX+TyQ==",
   "success": true,
   "projectFilePath": "C:\\Users\\nicks\\OneDrive\\Desktop\\lavender\\Lavender\\Lavender.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\nicks\\.nuget\\packages\\avalonedit\\6.3.1.120\\avalonedit.6.3.1.120.nupkg.sha512",
     "C:\\Users\\nicks\\.nuget\\packages\\google.protobuf\\3.30.2\\google.protobuf.3.30.2.nupkg.sha512",
     "C:\\Users\\nicks\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\nicks\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\9.0.4\\microsoft.bcl.asyncinterfaces.9.0.4.nupkg.sha512",
