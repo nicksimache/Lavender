@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,12 +9,21 @@ using Lavender.Core.DataTypes;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.ML.Tokenizers;
 
 namespace Lavender.Infrastructure.Indexing.Chunking
 {
     public class CodeChunkService
     {
         private const int GenericChunkLineLimit = 200;
+
+        /// <summary>
+        /// maximum tokens per code chunk
+        /// </summary>
+        private const int CodeTokenBudget = 2000;
+
+        private static readonly Tokenizer EmbeddingTokenizer =
+            TiktokenTokenizer.CreateForModel("text-embedding-3-small");
 
         private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
         {
@@ -34,17 +43,34 @@ namespace Lavender.Infrastructure.Indexing.Chunking
             "requirements.txt"
         };
 
-        private static readonly HashSet<string> IgnoredDirectoryNames = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> IgnoredDirectoryNames =
+            new(StringComparer.OrdinalIgnoreCase)
         {
+            // Unity generated/cache
+            "Library",
+            "Temp",
+            "Logs",
+            "UserSettings",
+
+            // Build output
+            "Build",
+            "Builds",
+
+            // IDE / tooling
             ".git",
             ".vs",
-            ".venv",
-            "__pycache__",
+            ".vscode",
+            ".idea",
+
+            // .NET generated
             "bin",
             "obj",
-            "lavender_vectors",
+
+            // Other tooling
+            ".venv",
+            "__pycache__",
             "node_modules",
-            "packages",
+            "lavender_vectors",
             "artifacts"
         };
 
@@ -60,7 +86,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                         : GetGenericFileChunks(file));
             }
 
-            return codeChunks;
+            return codeChunks.SelectMany(SplitChunk).ToList();
         }
 
         private static IEnumerable<string> EnumerateIndexableFiles(string root)
@@ -141,7 +167,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
 
             if (lines.Length <= GenericChunkLineLimit)
             {
-                return new List<CodeChunk> { CreateGenericFileChunk(filePath, fileText, 1, lines.Length, "WholeFile") };
+                return CreateGenericFileChunk(filePath, fileText, 1, lines.Length, "WholeFile");
             }
 
             var chunks = new List<CodeChunk>();
@@ -154,7 +180,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                 int startLine = startIndex + 1;
                 int endLine = Math.Min(lines.Length, startIndex + GenericChunkLineLimit);
 
-                chunks.Add(CreateGenericFileChunk(
+                chunks.AddRange(CreateGenericFileChunk(
                     filePath,
                     chunkText,
                     startLine,
@@ -165,7 +191,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
             return chunks;
         }
 
-        private static CodeChunk CreateGenericFileChunk(
+        private static List<CodeChunk> CreateGenericFileChunk(
             string filePath,
             string code,
             int startLine,
@@ -192,7 +218,85 @@ namespace Lavender.Infrastructure.Indexing.Chunking
             };
 
             chunk.EmbeddingText = BuildEmbeddingText(chunk);
-            return chunk;
+
+            return new List<CodeChunk> { chunk };
+        }
+
+        // One final size policy for every semantic and generic chunk type.
+        internal static IEnumerable<CodeChunk> SplitChunk(CodeChunk original)
+        {
+            original.EmbeddingText = BuildEmbeddingText(original);
+            if (EmbeddingTokenizer.CountTokens(original.EmbeddingText) <= CodeTokenBudget)
+            {
+                yield return original;
+                yield break;
+            }
+
+            CodeChunk Copy(string code, int offset, int start, int end) => new()
+            {
+                Id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+                    $"{original.Id}:{original.StartLine}:{original.EndLine}:offset:{offset}"))),
+                FilePath = original.FilePath, RelativePath = original.RelativePath,
+                ChunkType = original.ChunkType, Namespace = original.Namespace,
+                ClassName = original.ClassName, MemberName = original.MemberName,
+                Signature = original.Signature, StartLine = start, EndLine = end, Code = code
+            };
+
+            int metadataTokens = EmbeddingTokenizer.CountTokens(BuildEmbeddingText(Copy("", 0, 0, 0)));
+            int budget = CodeTokenBudget - metadataTokens - 16;
+            if (budget <= 0 || original.Code.Length == 0)
+                throw new InvalidOperationException($"Chunk metadata exceeds token budget: {original.FilePath}, {original.MemberName}");
+
+            int offset = 0, line = original.StartLine;
+            bool summary = original.ChunkType is CodeChunk.E_ChunkType.FileSummary or CodeChunk.E_ChunkType.ClassFields;
+            while (offset < original.Code.Length)
+            {
+                string remaining = original.Code[offset..];
+                int length = EmbeddingTokenizer.GetIndexByTokenCount(remaining, budget, out _, out _);
+                // Keep Unicode characters and CRLF pairs intact.
+                int SafeBoundary(int n)
+                {
+                    if (n > 0 && n < remaining.Length &&
+                        ((char.IsHighSurrogate(remaining[n - 1]) && char.IsLowSurrogate(remaining[n])) ||
+                         (remaining[n - 1] == '\r' && remaining[n] == '\n'))) n--;
+                    return n;
+                }
+                length = SafeBoundary(length);
+                if (length < remaining.Length && length > 0)
+                {
+                    int newline = remaining.LastIndexOf('\n', length - 1, length);
+                    if (newline >= 0) length = newline + 1;
+                }
+
+                CodeChunk part;
+                while (true)
+                {
+                    if (length <= 0)
+                        throw new InvalidOperationException($"Cannot fit chunk in token budget: {original.FilePath}, line {line}");
+                    part = Copy(remaining[..length], offset, line, line);
+                    part.EmbeddingText = BuildEmbeddingText(part);
+                    if (EmbeddingTokenizer.CountTokens(part.EmbeddingText) <= CodeTokenBudget) break;
+                    length = SafeBoundary(length / 2);
+                }
+                int breaks = 0, endLine = line;
+                for (int i = 0; i < part.Code.Length; i++)
+                {
+                    endLine = line + breaks;
+                    if (part.Code[i] == '\r')
+                    {
+                        if (i + 1 < part.Code.Length && part.Code[i + 1] == '\n') i++;
+                        breaks++;
+                    }
+                    else if (part.Code[i] == '\n') breaks++;
+                }
+                // Synthesized summaries describe a scope, not contiguous source lines.
+                part.StartLine = summary ? original.StartLine : line;
+                part.EndLine = summary ? original.EndLine : endLine;
+                part.EmbeddingText = BuildEmbeddingText(part);
+                yield return part;
+                offset += length;
+                line += breaks;
+            }
         }
 
         private static string GetFileKind(string filePath)
@@ -384,8 +488,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                 var endLine = lineSpan.EndLinePosition.Line + 1;
 
                 string code =
-                    methodNode.GetLeadingTrivia().ToFullString() +
-                    methodNode.ToFullString();
+                    methodNode.ToString();
 
                 string? ns = methodNode
                 .Ancestors()
@@ -448,8 +551,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                 var endLine = lineSpan.EndLinePosition.Line + 1;
 
                 string code =
-                    conNode.GetLeadingTrivia().ToFullString() +
-                    conNode.ToFullString();
+                    conNode.ToString();
 
                 string? ns = conNode
                 .Ancestors()
@@ -511,8 +613,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                 var endLine = lineSpan.EndLinePosition.Line + 1;
 
                 string code =
-                    pdNode.GetLeadingTrivia().ToFullString() +
-                    pdNode.ToFullString();
+                    pdNode.ToString();
 
                 string? ns = pdNode
                 .Ancestors()
@@ -598,7 +699,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                     StartLine = startLine,
                     EndLine = endLine,
 
-                    Code = recordNode.GetLeadingTrivia().ToFullString() + recordNode.ToFullString()
+                    Code = recordNode.ToString()
                 };
 
                 chunk.EmbeddingText = BuildEmbeddingText(chunk);
@@ -652,7 +753,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                     StartLine = startLine,
                     EndLine = endLine,
 
-                    Code = structNode.GetLeadingTrivia().ToFullString() + structNode.ToFullString()
+                    Code = structNode.ToString()
                 };
 
                 chunk.EmbeddingText = BuildEmbeddingText(chunk);
@@ -706,7 +807,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                     StartLine = startLine,
                     EndLine = endLine,
 
-                    Code = interfaceNode.GetLeadingTrivia().ToFullString() + interfaceNode.ToFullString()
+                    Code = interfaceNode.ToString()
                 };
 
                 chunk.EmbeddingText = BuildEmbeddingText(chunk);
@@ -760,7 +861,7 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                     StartLine = startLine,
                     EndLine = endLine,
 
-                    Code = enumNode.GetLeadingTrivia().ToFullString() + enumNode.ToFullString()
+                    Code = enumNode.ToString()
                 };
 
                 chunk.EmbeddingText = BuildEmbeddingText(chunk);
@@ -785,3 +886,5 @@ namespace Lavender.Infrastructure.Indexing.Chunking
         }
     }
 }
+
+

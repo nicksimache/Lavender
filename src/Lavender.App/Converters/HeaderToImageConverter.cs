@@ -2,41 +2,40 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Windows.Data;
-using System.Windows.Media.Imaging;
+using System.Windows.Media;
 
 namespace Lavender.App.Converters
 {
-    [ValueConversion(typeof(string), typeof(BitmapImage))]
+    [ValueConversion(typeof(string), typeof(ImageSource))]
     internal class HeaderToImageConverter : IValueConverter
     {
-        public static HeaderToImageConverter Instance = new HeaderToImageConverter();
+        public static HeaderToImageConverter Instance = new();
+        private static readonly ImageSource CsIcon = CreateCsIcon();
 
-        private readonly string csIcon = "/src/Lavender.App/Assets/Images/csharp_file_icon.png";
-        private readonly string fileIcon = "";
+        // Geometry copied from Assets/Images/csharp_file_icon.svg; no raster scaling.
+        private static ImageSource CreateCsIcon()
+        {
+            var drawing = new DrawingGroup();
+            // Preserve the original SVG's 32 x 32 viewBox.
+            drawing.Children.Add(new GeometryDrawing(Brushes.Transparent, null,
+                new RectangleGeometry(new System.Windows.Rect(0, 0, 32, 32))));
+            foreach (var shape in new GeometryDrawing[]
+            {
+            new GeometryDrawing(new SolidColorBrush((Color)ColorConverter.ConvertFromString("#368832")), null, Geometry.Parse("M19.792,7.071h2.553V9.624H24.9V7.071h2.552V9.624H30v2.552h-2.55v2.551H30V17.28H27.449v2.552H24.9v-2.55l-2.55,0,0,2.552H19.793v-2.55l-2.553,0V14.725h2.553V12.179H17.24V9.622h2.554Zm2.553,7.658H24.9V12.176H22.345Z")),
+            new GeometryDrawing(new SolidColorBrush((Color)ColorConverter.ConvertFromString("#368832")), null, Geometry.Parse("M14.689,24.013a10.2,10.2,0,0,1-4.653.915,7.6,7.6,0,0,1-5.89-2.336A8.839,8.839,0,0,1,2,16.367,9.436,9.436,0,0,1,4.412,9.648a8.181,8.181,0,0,1,6.259-2.577,11.1,11.1,0,0,1,4.018.638v3.745a6.81,6.81,0,0,0-3.723-1.036,4.793,4.793,0,0,0-3.7,1.529,5.879,5.879,0,0,0-1.407,4.142,5.774,5.774,0,0,0,1.328,3.992,4.551,4.551,0,0,0,3.575,1.487,7.288,7.288,0,0,0,3.927-1.108Z")),
+            }) drawing.Children.Add(shape);
+            var image = new DrawingImage(drawing);
+            image.Freeze();
+            return image;
+        }
 
         public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not string path)
-                return null;
-
-            string icon = "";
-
-            if (!new FileInfo(path).Attributes.HasFlag(FileAttributes.Directory))
-            {
-                icon = path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-                    ? csIcon
-                    : fileIcon;
-            }
-
-            if (string.IsNullOrWhiteSpace(icon))
-                return null;
-
-            return new BitmapImage(new Uri(icon, UriKind.Relative));
+            return value is string path && !Directory.Exists(path)
+                && path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? CsIcon : null;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
+            => throw new NotImplementedException();
     }
 }

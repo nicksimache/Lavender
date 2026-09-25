@@ -770,17 +770,20 @@ namespace Lavender.App
             if (isHighlighting)
                 return;
 
-            HighlightCurrentDocument();
+            // Do not rebuild the FlowDocument while typing: it resets the caret,
+            // selection, scroll position and undo history. Highlight on file load.
         }
 
         private void ShowCodeInPreview(string code)
         {
             isHighlighting = true;
 
-            var spans = SyntaxHighlighter.HighlightCSharpCode(code);
-            RichTextBoxRenderer.Render(FilePreviewBox, spans);
-
-            isHighlighting = false;
+            try
+            {
+                var spans = SyntaxHighlighter.HighlightCSharpCode(code);
+                RichTextBoxRenderer.Render(FilePreviewBox, spans);
+            }
+            finally { isHighlighting = false; }
         }
 
         private void HighlightCurrentDocument()

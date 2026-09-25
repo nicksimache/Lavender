@@ -4,6 +4,7 @@
         xmlns:converters="clr-namespace:Lavender.App.Converters"
         Title="Lavender"
         WindowState="Maximized"
+        UseLayoutRounding="True"
         Height="760"
         Width="1280"
         MinHeight="560"

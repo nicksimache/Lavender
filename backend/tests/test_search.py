@@ -193,13 +193,27 @@ class SearchTests(unittest.TestCase):
 
     def test_failure_stops_search_waiting(self):
         self.backend.client.embeddings.create.side_effect = RuntimeError("API unavailable")
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(self.backend.HTTPException):
             self.backend.embed_project(self.backend.EmbedProjectRequest(chunks=self.chunks(1), index_id="failed"))
         self.backend.client.embeddings.create.side_effect = self.fake_embeddings
         result = self.http.post("/search", json={"query": "x", "index_id": "failed"}).json()
         self.assertEqual(result["indexing_status"], "failed")
         self.assertIn("API unavailable", result["indexing_error"])
         self.assertTrue(result["is_partial"])
+
+    def test_embedding_error_identifies_source_without_logging_code(self):
+        row = dict(id="chunk-7", file_path="Assets/Test.cs", start_line=10,
+                   end_line=90, chunk_type="Method", member_name="Test",
+                   code="private source", embedding_text="private source")
+        context = self.backend.embedding_failure_context(
+            ValueError("Invalid 'input[1]': maximum input length is 8192 tokens."),
+            ["a", "b"], {"a": [dict(row, file_path="Other.cs")], "b": [row]})
+        self.assertEqual(context["failed_input"]["chunks"][0]["file_path"], "Assets/Test.cs")
+        self.assertNotIn("private source", str(context))
+        unknown = self.backend.embedding_failure_context(ValueError("API unavailable"),
+                                                          ["b"], {"b": [row]})
+        self.assertIsNone(unknown["failed_input"])
+        self.assertEqual(len(unknown["batch_inputs"]), 1)
 
     def test_failure_after_first_batch_can_resume_from_cache(self):
         calls = 0
@@ -211,7 +225,7 @@ class SearchTests(unittest.TestCase):
             return self.fake_embeddings(**kwargs)
         self.backend.client.embeddings.create.side_effect = fail_second
         request = self.backend.EmbedProjectRequest(chunks=self.chunks(36), index_id="interrupted")
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(self.backend.HTTPException):
             self.backend.embed_project(request)
         self.backend.client.embeddings.create.side_effect = self.fake_embeddings
         retried = self.backend.embed_project(request)
@@ -266,3 +280,4 @@ class SearchTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

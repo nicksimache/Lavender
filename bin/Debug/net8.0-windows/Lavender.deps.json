@@ -13,6 +13,8 @@
           "Microsoft.CodeAnalysis.CSharp": "5.6.0",
           "Microsoft.CodeAnalysis.CSharp.Workspaces": "5.6.0",
           "Microsoft.CodeAnalysis.Workspaces.MSBuild": "5.6.0",
+          "Microsoft.ML.Tokenizers": "2.0.0",
+          "Microsoft.ML.Tokenizers.Data.Cl100kBase": "2.0.0",
           "ModelContextProtocol": "1.4.1",
           "OpenAI": "2.11.0"
         },
@@ -20,11 +22,43 @@
           "Lavender.dll": {}
         }
       },
+      "Google.Protobuf/3.30.2": {
+        "runtime": {
+          "lib/net5.0/Google.Protobuf.dll": {
+            "assemblyVersion": "3.30.2.0",
+            "fileVersion": "3.30.2.0"
+          }
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "runtime": {
           "lib/net6.0/Humanizer.dll": {
             "assemblyVersion": "2.14.0.0",
             "fileVersion": "2.14.1.48190"
+          }
+        }
+      },
+      "Microsoft.Bcl.AsyncInterfaces/9.0.4": {
+        "runtime": {
+          "lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll": {
+            "assemblyVersion": "9.0.0.4",
+            "fileVersion": "9.0.425.16305"
+          }
+        }
+      },
+      "Microsoft.Bcl.HashCode/6.0.0": {
+        "runtime": {
+          "lib/net6.0/Microsoft.Bcl.HashCode.dll": {
+            "assemblyVersion": "6.0.0.0",
+            "fileVersion": "6.0.24.56208"
+          }
+        }
+      },
+      "Microsoft.Bcl.Memory/9.0.4": {
+        "runtime": {
+          "lib/net8.0/Microsoft.Bcl.Memory.dll": {
+            "assemblyVersion": "9.0.0.4",
+            "fileVersion": "9.0.425.16305"
           }
         }
       },
@@ -483,6 +517,38 @@
           }
         }
       },
+      "Microsoft.ML.Tokenizers/2.0.0": {
+        "dependencies": {
+          "Google.Protobuf": "3.30.2"
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.ML.Tokenizers.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "2.0.25.55704"
+          }
+        }
+      },
+      "Microsoft.ML.Tokenizers.Data.Cl100kBase/2.0.0": {
+        "dependencies": {
+          "Google.Protobuf": "3.30.2",
+          "Microsoft.Bcl.AsyncInterfaces": "9.0.4",
+          "Microsoft.Bcl.HashCode": "6.0.0",
+          "Microsoft.Bcl.Memory": "9.0.4",
+          "Microsoft.ML.Tokenizers": "2.0.0",
+          "System.Buffers": "4.6.1",
+          "System.IO.Pipelines": "10.0.7",
+          "System.Memory": "4.6.3",
+          "System.Runtime.CompilerServices.Unsafe": "6.1.2",
+          "System.Text.Encodings.Web": "10.0.6",
+          "System.Text.Json": "10.0.6"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.ML.Tokenizers.Data.Cl100kBase.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "2.0.25.55704"
+          }
+        }
+      },
       "Microsoft.VisualStudio.SolutionPersistence/1.0.52": {
         "runtime": {
           "lib/net8.0/Microsoft.VisualStudio.SolutionPersistence.dll": {
@@ -530,6 +596,7 @@
           }
         }
       },
+      "System.Buffers/4.6.1": {},
       "System.ClientModel/1.10.0": {
         "dependencies": {
           "Microsoft.Extensions.Configuration.Abstractions": "10.0.7",
@@ -630,6 +697,7 @@
           }
         }
       },
+      "System.Memory/4.6.3": {},
       "System.Memory.Data/10.0.3": {
         "dependencies": {
           "System.Text.Json": "10.0.6"
@@ -660,6 +728,7 @@
           }
         }
       },
+      "System.Runtime.CompilerServices.Unsafe/6.1.2": {},
       "System.Text.Encodings.Web/10.0.6": {
         "runtime": {
           "lib/net8.0/System.Text.Encodings.Web.dll": {
@@ -696,12 +765,40 @@
       "serviceable": false,
       "sha512": ""
     },
+    "Google.Protobuf/3.30.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Y2aOVLIt75yeeEWigg9V9YnjsEm53sADtLGq0gLhwaXpk3iu8tYSoauolyhenagA2sWno2TQ2WujI0HQd6s1Vw==",
+      "path": "google.protobuf/3.30.2",
+      "hashPath": "google.protobuf.3.30.2.nupkg.sha512"
+    },
     "Humanizer.Core/2.14.1": {
       "type": "package",
       "serviceable": true,
       "sha512": "sha512-lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw==",
       "path": "humanizer.core/2.14.1",
       "hashPath": "humanizer.core.2.14.1.nupkg.sha512"
+    },
+    "Microsoft.Bcl.AsyncInterfaces/9.0.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-9VGI5kxIvrNG2mqLQZnUR6y/3fcnygD8eNpHR+CqfbnIXvea6nehnYknDKQTxZVPMpzpNca+7DxLBmpdB3q0Bw==",
+      "path": "microsoft.bcl.asyncinterfaces/9.0.4",
+      "hashPath": "microsoft.bcl.asyncinterfaces.9.0.4.nupkg.sha512"
+    },
+    "Microsoft.Bcl.HashCode/6.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-GI4jcoi6eC9ZhNOQylIBaWOQjyGaR8T6N3tC1u8p3EXfndLCVNNWa+Zp+ocjvvS3kNBN09Zma2HXL0ezO0dRfw==",
+      "path": "microsoft.bcl.hashcode/6.0.0",
+      "hashPath": "microsoft.bcl.hashcode.6.0.0.nupkg.sha512"
+    },
+    "Microsoft.Bcl.Memory/9.0.4": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-uVvex/6jngf2R5KT77AOSqNv81hpiLr0Mt54xUNUTU8IwNrLIJjHCBxfznEJYA1MlZ5Dt/2TIW6rHhv7DVmDyQ==",
+      "path": "microsoft.bcl.memory/9.0.4",
+      "hashPath": "microsoft.bcl.memory.9.0.4.nupkg.sha512"
     },
     "Microsoft.Build.Framework/17.11.48": {
       "type": "package",
@@ -850,6 +947,20 @@
       "path": "microsoft.extensions.primitives/10.0.7",
       "hashPath": "microsoft.extensions.primitives.10.0.7.nupkg.sha512"
     },
+    "Microsoft.ML.Tokenizers/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-+b8lT4cLLO/sBR2hjvE/qG6qrZG15h7/PBvnIrzTh4xDaAxdHUY6449rC+1pHzQUsBiCHZVbj+VMn+xS0sL7TA==",
+      "path": "microsoft.ml.tokenizers/2.0.0",
+      "hashPath": "microsoft.ml.tokenizers.2.0.0.nupkg.sha512"
+    },
+    "Microsoft.ML.Tokenizers.Data.Cl100kBase/2.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-APL8S3FFDesfAMBACeVhRjFLMEEavCVgExPvmM1JkC4u+iiQOiqmOS47bN0n4iKM8k/yYhxd3bBVB3uKo6CCGg==",
+      "path": "microsoft.ml.tokenizers.data.cl100kbase/2.0.0",
+      "hashPath": "microsoft.ml.tokenizers.data.cl100kbase.2.0.0.nupkg.sha512"
+    },
     "Microsoft.VisualStudio.SolutionPersistence/1.0.52": {
       "type": "package",
       "serviceable": true,
@@ -877,6 +988,13 @@
       "sha512": "sha512-f0y5zOZVNhuc/gPQUHGkiljZlDUq2SddGOkGTPLHnjQC5mCiTCXq1BqxZ+xxxHU6bY0mEtFQJj1RlB2BpwD7Lw==",
       "path": "openai/2.11.0",
       "hashPath": "openai.2.11.0.nupkg.sha512"
+    },
+    "System.Buffers/4.6.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-N8GXpmiLMtljq7gwvyS+1QvKT/W2J8sNAvx+HVg4NGmsG/H+2k/y9QI23auLJRterrzCiDH+IWAw4V/GPwsMlw==",
+      "path": "system.buffers/4.6.1",
+      "hashPath": "system.buffers.4.6.1.nupkg.sha512"
     },
     "System.ClientModel/1.10.0": {
       "type": "package",
@@ -948,6 +1066,13 @@
       "path": "system.io.pipelines/10.0.7",
       "hashPath": "system.io.pipelines.10.0.7.nupkg.sha512"
     },
+    "System.Memory/4.6.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-qdcDOgnFZY40+Q9876JUHnlHu7bosOHX8XISRoH94fwk6hgaeQGSgfZd8srWRZNt5bV9ZW2TljcegDNxsf+96A==",
+      "path": "system.memory/4.6.3",
+      "hashPath": "system.memory.4.6.3.nupkg.sha512"
+    },
     "System.Memory.Data/10.0.3": {
       "type": "package",
       "serviceable": true,
@@ -968,6 +1093,13 @@
       "sha512": "sha512-zpcfT/wacPPhE17zcudozlxQtWN/84qyiMyZNGLnK4cj2IMBtLsZYwYjVnALUhPliwyUVj/P7kaZvBWYBCnf2Q==",
       "path": "system.reflection.metadata/10.0.1",
       "hashPath": "system.reflection.metadata.10.0.1.nupkg.sha512"
+    },
+    "System.Runtime.CompilerServices.Unsafe/6.1.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2hBr6zdbIBTDE3EhK7NSVNdX58uTK6iHW/P/Axmm9sl1xoGSLqDvMtpecn226TNwHByFokYwJmt/aQQNlO5CRw==",
+      "path": "system.runtime.compilerservices.unsafe/6.1.2",
+      "hashPath": "system.runtime.compilerservices.unsafe.6.1.2.nupkg.sha512"
     },
     "System.Text.Encodings.Web/10.0.6": {
       "type": "package",

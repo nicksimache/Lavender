@@ -67,6 +67,14 @@
               "target": "Package",
               "version": "[5.6.0, )"
             },
+            "Microsoft.ML.Tokenizers": {
+              "target": "Package",
+              "version": "[2.0.0, )"
+            },
+            "Microsoft.ML.Tokenizers.Data.Cl100kBase": {
+              "target": "Package",
+              "version": "[2.0.0, )"
+            },
             "ModelContextProtocol": {
               "target": "Package",
               "version": "[1.4.1, )"

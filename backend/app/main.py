@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import time
 import uuid
 import os
@@ -121,6 +122,22 @@ def get_embeddings(texts):
     return [item.embedding for item in ordered]
 
 
+def embedding_failure_context(error, batch, pending):
+    """Map the API's batch-local input index back to source, without logging code."""
+    inputs = []
+    for index, key in enumerate(batch):
+        inputs.append({"input_index": index, "chunks": [
+            {field: row.get(field) for field in
+             ("id", "file_path", "start_line", "end_line", "chunk_type", "member_name")}
+            for row in pending[key]]})
+    match = re.search(r"input\[(\d+)\]", str(error))
+    index = int(match.group(1)) if match else None
+    return {
+        "failed_input": inputs[index] if index is not None and 0 <= index < len(inputs) else None,
+        "batch_inputs": inputs,
+    }
+
+
 def get_embedding(text: str) -> list[float]:
     response = client.embeddings.create(
         model=EMBED_MODEL,
@@ -193,6 +210,9 @@ def embed_project(request: EmbedProjectRequest):
             timings["embedding_requests"] += 1
             try:
                 vectors = get_embeddings([pending[key][0]["embedding_text"] for key in batch])
+            except Exception as exc:
+                timings["embedding_failure"] = embedding_failure_context(exc, batch, pending)
+                raise
             finally:
                 timings["embedding_api_ms"] += (time.perf_counter() - api_started) * 1000
             batch_rows = []
@@ -224,7 +244,12 @@ def embed_project(request: EmbedProjectRequest):
         with changed:
             state.update(status="failed", error=str(exc))
             changed.notify_all()
-        raise
+        failure = timings.get("embedding_failure", {}).get("failed_input")
+        source = ""
+        if failure:
+            chunk = failure["chunks"][0]
+            source = f" File: {chunk['file_path']}, lines {chunk['start_line']}-{chunk['end_line']}, chunk {chunk['id']}."
+        raise HTTPException(status_code=500, detail=f"Indexing failed: {exc}.{source}") from exc
     finally:
         if connection is not None:
             connection.close()

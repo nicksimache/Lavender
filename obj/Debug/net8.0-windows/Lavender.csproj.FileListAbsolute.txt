@@ -859,3 +859,15 @@ C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\tr\Micro
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\Google.Protobuf.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\Microsoft.Bcl.AsyncInterfaces.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\Microsoft.Bcl.HashCode.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\Microsoft.Bcl.Memory.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\Microsoft.ML.Tokenizers.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\Microsoft.ML.Tokenizers.Data.Cl100kBase.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Google.Protobuf.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsoft.Bcl.AsyncInterfaces.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsoft.Bcl.HashCode.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsoft.Bcl.Memory.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsoft.ML.Tokenizers.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsoft.ML.Tokenizers.Data.Cl100kBase.dll
