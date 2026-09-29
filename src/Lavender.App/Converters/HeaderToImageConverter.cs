@@ -11,6 +11,9 @@ namespace Lavender.App.Converters
     {
         public static HeaderToImageConverter Instance = new();
         private static readonly ImageSource CsIcon = CreateCsIcon();
+        private static readonly System.Windows.ResourceDictionary Icons =
+            (System.Windows.ResourceDictionary)System.Windows.Application.LoadComponent(
+                new Uri("/Lavender;component/src/Lavender.App/Assets/Images/ExplorerIcons.xaml", UriKind.Relative));
 
         // Geometry copied from Assets/Images/csharp_file_icon.svg; no raster scaling.
         private static ImageSource CreateCsIcon()
@@ -31,8 +34,16 @@ namespace Lavender.App.Converters
 
         public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            return value is string path && !Directory.Exists(path)
-                && path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ? CsIcon : null;
+            if (value is not string path) return null;
+            if (Directory.Exists(path)) return Icons["Folder"];
+            return Path.GetExtension(path).ToLowerInvariant() switch
+            {
+                ".cs" => CsIcon,
+                ".html" or ".htm" or ".md" or ".markdown" => Icons["Markup"],
+                ".csproj" => Icons["Project"],
+                ".sln" or ".slnx" => Icons["Solution"],
+                _ => Icons["Other"]
+            };
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

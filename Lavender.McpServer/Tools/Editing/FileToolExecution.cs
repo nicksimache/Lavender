@@ -13,7 +13,8 @@ internal static class FileToolExecution
 
     public static FileToolResult Result(ProjectFileEdit edit, string status) =>
         new(true, edit.Changed, edit.Changed ? status : "unchanged",
-            edit.Changed ? $"{status}: {edit.Path}. Read source directly or reindex before semantic/symbol queries."
+            edit.Changed ? $"{status}: {edit.Path}. Read source directly before semantic/symbol queries."
                 : "Contents already match; no change made.",
             edit.Path, edit.DestinationPath, ContentHash: edit.ContentHash, BackupPath: edit.BackupPath);
 }
+

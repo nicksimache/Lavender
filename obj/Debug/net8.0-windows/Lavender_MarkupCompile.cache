@@ -10,11 +10,11 @@ none
 false
 TRACE;DEBUG;NET;NET8_0;NETCOREAPP
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\src\Lavender.App\App.xaml
-11425318212
+21835153250
 231827369862
 47-1223917690
 2481128292479
-src\Lavender.App\MainWindow.xaml;
+src\Lavender.App\Assets\Images\ExplorerIcons.xaml;src\Lavender.App\MainWindow.xaml;
 
 False
 

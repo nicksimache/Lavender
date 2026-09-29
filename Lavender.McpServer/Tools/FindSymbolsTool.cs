@@ -20,7 +20,7 @@ public sealed class FindSymbolsTool
     }
 
     [McpServerTool(Name = "lavender_find_symbols")]
-    [Description("Finds symbols in the currently indexed C# project by name or fully qualified name. Call lavender_index_project first.")]
+    [Description("Finds symbols in the currently indexed C# project by name or fully qualified name. Lavender indexes on project load; if unavailable, read source files directly.")]
     public FindSymbolsResult FindSymbols(
         [Description("Text to search for in symbol names or fully qualified names.")]
         string query,
@@ -109,3 +109,4 @@ public sealed record SymbolSummary(
             StartLine: symbol.StartLine,
             EndLine: symbol.EndLine);
 }
+

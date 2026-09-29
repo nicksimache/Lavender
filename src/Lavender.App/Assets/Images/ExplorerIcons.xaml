@@ -1,0 +1,62 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<DrawingImage x:Key="Project"><DrawingImage.Drawing><DrawingGroup>
+<GeometryDrawing Brush="Transparent"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,32,32"/></GeometryDrawing.Geometry></GeometryDrawing>
+<GeometryDrawing Geometry="M29.821,4.321,24.023,2,11.493,14.212,3.833,8.385l-1.654.837V22.8l1.644.827,7.65-5.827L24.023,30l5.8-2.321V4.321ZM4.65,19.192V12.818L8.2,15.985ZM16,15.985l7.082-5.3V21.324l-7.092-5.339Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#68217a"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M15.995 15.985 23.077 10.686 23.077 21.324 15.985 15.985 15.995 15.985Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#fff"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M4.65 19.192 4.65 12.818 8.196 15.985 4.65 19.192Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#fff"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M30.089 28.175 21.345 28.174 21.345 26.259 19.43 26.257 19.43 17.516 21.344 17.517 21.342 15.604 30.087 15.604 30.087 17.519 32.001 17.519 31.999 21.346 32 21.346 32 26.261 30.088 26.261 30.089 28.175Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#efeef0"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M15.527,32A7.159,7.159,0,0,1,10,29.758a8.1,8.1,0,0,1-2-5.683,8.56,8.56,0,0,1,2.213-6.063A7.608,7.608,0,0,1,16,15.6a9.836,9.836,0,0,1,3.558.581l.956.372v6.56l-2.3-1.458a3.6,3.6,0,0,0-1.989-.544,2.117,2.117,0,0,0-1.672.662,2.957,2.957,0,0,0-.658,2.091,2.877,2.877,0,0,0,.615,2,1.9,1.9,0,0,0,1.562.614,3.968,3.968,0,0,0,2.153-.6l2.292-1.426v6.28l-.815.419A9.144,9.144,0,0,1,15.527,32Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#efeef0"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M22.844,17.1h1.915v1.915h1.914V17.1h1.914v1.915H30.5v1.914H28.587v1.913H30.5V24.76H28.587v1.914H26.673V24.762l-1.912,0,0,1.914H22.845V24.761l-1.915,0V22.844h1.915V20.935H20.93V19.017h1.915Zm1.915,5.744h1.914V20.932H24.759Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#368832"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M19.017,29.81a7.65,7.65,0,0,1-3.49.686,5.7,5.7,0,0,1-4.417-1.752A6.629,6.629,0,0,1,9.5,24.076a7.077,7.077,0,0,1,1.809-5.039A6.136,6.136,0,0,1,16,17.1a8.329,8.329,0,0,1,3.013.479v2.809a5.108,5.108,0,0,0-2.792-.777,3.6,3.6,0,0,0-2.775,1.147,4.409,4.409,0,0,0-1.055,3.107,4.331,4.331,0,0,0,1,2.994,3.413,3.413,0,0,0,2.681,1.115,5.466,5.466,0,0,0,2.945-.831Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#368832"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+</DrawingGroup></DrawingImage.Drawing></DrawingImage>
+<DrawingImage x:Key="Markup"><DrawingImage.Drawing><DrawingGroup>
+<GeometryDrawing Brush="Transparent"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,24,24"/></GeometryDrawing.Geometry></GeometryDrawing>
+<GeometryDrawing Geometry="M10 17L8 15L10 13M14 13L16 15L14 17M13 3H8.2C7.0799 3 6.51984 3 6.09202 3.21799C5.71569 3.40973 5.40973 3.71569 5.21799 4.09202C5 4.51984 5 5.0799 5 6.2V17.8C5 18.9201 5 19.4802 5.21799 19.908C5.40973 20.2843 5.71569 20.5903 6.09202 20.782C6.51984 21 7.0799 21 8.2 21H15.8C16.9201 21 17.4802 21 17.908 20.782C18.2843 20.5903 18.5903 20.2843 18.782 19.908C19 19.4802 19 18.9201 19 17.8V9M13 3L19 9M13 3V8C13 8.55228 13.4477 9 14 9H19">
+<GeometryDrawing.Pen><Pen Brush="#BEBEBE" Thickness="2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
+</GeometryDrawing>
+</DrawingGroup></DrawingImage.Drawing></DrawingImage>
+<DrawingImage x:Key="Folder"><DrawingImage.Drawing><DrawingGroup>
+<GeometryDrawing Brush="Transparent"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,24,24"/></GeometryDrawing.Geometry></GeometryDrawing>
+<GeometryDrawing Geometry="M21,8V19a1,1,0,0,1-1,1H4a1,1,0,0,1-1-1V5A1,1,0,0,1,4,4H9.59a1,1,0,0,1,.7.29l2.42,2.42a1,1,0,0,0,.7.29H20A1,1,0,0,1,21,8Z">
+<GeometryDrawing.Pen><Pen Brush="#BEBEBE" Thickness="2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
+</GeometryDrawing>
+</DrawingGroup></DrawingImage.Drawing></DrawingImage>
+<DrawingImage x:Key="Solution"><DrawingImage.Drawing><DrawingGroup>
+<GeometryDrawing Brush="Transparent"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,32,32"/></GeometryDrawing.Geometry></GeometryDrawing>
+<GeometryDrawing Geometry="M6.045,23.991a1.166,1.166,0,0,1-1.208.191L2.718,23.3A1.168,1.168,0,0,1,2,22.222V9.778A1.165,1.165,0,0,1,2.718,8.7l2.119-.883a1.169,1.169,0,0,1,1.208.191l.476.408A.646.646,0,0,0,5.5,8.942V23.058a.646.646,0,0,0,1.021.525Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#52218a"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M2.718,23.3A1.169,1.169,0,0,1,2,22.222v-.1a.674.674,0,0,0,1.174.452L21.25,2.583a1.743,1.743,0,0,1,1.99-.338l5.769,2.778A1.749,1.749,0,0,1,30,6.6v.067a1.1,1.1,0,0,0-1.8-.854L6.521,23.583l-.476.408a1.166,1.166,0,0,1-1.208.191Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#6c33af"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M2.718,8.7A1.168,1.168,0,0,0,2,9.778v.1a.674.674,0,0,1,1.174-.452L21.25,29.416a1.743,1.743,0,0,0,1.99.338l5.769-2.778A1.747,1.747,0,0,0,30,25.4v-.068a1.1,1.1,0,0,1-1.8.855L6.521,8.417l-.476-.408a1.166,1.166,0,0,0-1.208-.191Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#854cc7"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M23.24,29.755a1.743,1.743,0,0,1-1.99-.338A1.025,1.025,0,0,0,23,28.692V3.308a1.025,1.025,0,0,0-1.75-.725,1.743,1.743,0,0,1,1.99-.338l5.768,2.774A1.749,1.749,0,0,1,30,6.6V25.405a1.751,1.751,0,0,1-.991,1.577Z">
+<GeometryDrawing.Brush><SolidColorBrush Color="#b179f1"/></GeometryDrawing.Brush>
+</GeometryDrawing>
+<GeometryDrawing Geometry="M22.093,29.883a1.74,1.74,0,0,0,1.147-.128l5.768-2.774A1.749,1.749,0,0,0,30,25.4V6.6a1.75,1.75,0,0,0-.992-1.577L23.24,2.245a1.742,1.742,0,0,0-1.99.339l-9.3,10.284L6.521,8.416l-.476-.408a1.168,1.168,0,0,0-1.207-.191L2.719,8.7A1.167,1.167,0,0,0,2,9.689c0,.029,0,.059,0,.088V22.221c0,.03,0,.059,0,.088a1.167,1.167,0,0,0,.715.989l2.119.883a1.226,1.226,0,0,0,.155.052,1.165,1.165,0,0,0,1.052-.243l.476-.408,5.43-4.452,9.3,10.285A1.733,1.733,0,0,0,22.093,29.883ZM23,10.072,15.77,16,23,21.927ZM5.5,12l3.619,4L5.5,20Z">
+<GeometryDrawing.Brush><LinearGradientBrush StartPoint="16,2.072" EndPoint="16,29.928" MappingMode="Absolute" Opacity="0.25"><GradientStop Color="#FFFFFFFF" Offset="0"/><GradientStop Color="#00FFFFFF" Offset="1"/></LinearGradientBrush></GeometryDrawing.Brush>
+</GeometryDrawing>
+</DrawingGroup></DrawingImage.Drawing></DrawingImage>
+<DrawingImage x:Key="Other"><DrawingImage.Drawing><DrawingGroup>
+<GeometryDrawing Brush="Transparent"><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,24,24"/></GeometryDrawing.Geometry></GeometryDrawing>
+<GeometryDrawing Geometry="M19 9V17.8C19 18.9201 19 19.4802 18.782 19.908C18.5903 20.2843 18.2843 20.5903 17.908 20.782C17.4802 21 16.9201 21 15.8 21H8.2C7.07989 21 6.51984 21 6.09202 20.782C5.71569 20.5903 5.40973 20.2843 5.21799 19.908C5 19.4802 5 18.9201 5 17.8V6.2C5 5.07989 5 4.51984 5.21799 4.09202C5.40973 3.71569 5.71569 3.40973 6.09202 3.21799C6.51984 3 7.0799 3 8.2 3H13M19 9L13 3M19 9H14C13.4477 9 13 8.55228 13 8V3">
+<GeometryDrawing.Pen><Pen Brush="#BEBEBE" Thickness="2" StartLineCap="Round" EndLineCap="Round" LineJoin="Round"/></GeometryDrawing.Pen>
+</GeometryDrawing>
+</DrawingGroup></DrawingImage.Drawing></DrawingImage>
+</ResourceDictionary>

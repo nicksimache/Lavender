@@ -86,7 +86,8 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         await EnsureConnectedAsync(cancellationToken);
         _tools = await _client!.ListToolsAsync(cancellationToken: cancellationToken);
 
-        return _tools.Select(tool => new McpToolDefinition(
+        // Indexing is a desktop lifecycle operation, never an agent capability.
+        return _tools.Where(tool => tool.Name != "lavender_index_project").Select(tool => new McpToolDefinition(
             tool.Name,
             tool.Description ?? string.Empty,
             BinaryData.FromString(tool.JsonSchema.GetRawText())))
@@ -97,6 +98,16 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         string toolName,
         string argumentsJson,
         CancellationToken cancellationToken = default)
+    {
+        if (toolName == "lavender_index_project")
+            throw new InvalidOperationException("Indexing is managed by Lavender when opening a project. Use available read/search tools instead.");
+        return await InvokeToolAsync(toolName, argumentsJson, cancellationToken);
+    }
+
+    private async Task<string> InvokeToolAsync(
+        string toolName,
+        string argumentsJson,
+        CancellationToken cancellationToken)
     {
         await EnsureConnectedAsync(cancellationToken);
         _tools ??= await _client!.ListToolsAsync(cancellationToken: cancellationToken);
@@ -118,7 +129,7 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         string solutionPath,
         CancellationToken cancellationToken = default)
     {
-        string resultJson = await CallToolAsync(
+        string resultJson = await InvokeToolAsync(
             "lavender_index_project",
             JsonSerializer.Serialize(new { projectPath, solutionPath }),
             cancellationToken);

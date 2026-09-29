@@ -873,3 +873,4 @@ C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsof
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\Microsoft.ML.Tokenizers.Data.Cl100kBase.dll
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\mcp-runtime\ICSharpCode.AvalonEdit.dll
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\bin\Debug\net8.0-windows\ICSharpCode.AvalonEdit.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\obj\Debug\net8.0-windows\src\Lavender.App\Assets\Images\ExplorerIcons.baml

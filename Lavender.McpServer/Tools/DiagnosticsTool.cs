@@ -20,7 +20,7 @@ public sealed class DiagnosticsTool
     }
 
     [McpServerTool(Name = "lavender_get_diagnostics")]
-    [Description("Gets compiler diagnostics for the currently indexed C# project. Call lavender_index_project first.")]
+    [Description("Gets compiler diagnostics for the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
     public async Task<DiagnosticsToolResult> GetDiagnosticsAsync(
         [Description("Maximum number of diagnostics to return. Defaults to 100 and is capped at 500.")]
         int limit = DefaultLimit,
@@ -120,3 +120,4 @@ public sealed record DiagnosticSummary(
             SymbolId: diagnostic.SymbolId,
             ProjectName: diagnostic.ProjectName);
 }
+

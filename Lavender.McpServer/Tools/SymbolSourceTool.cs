@@ -19,7 +19,7 @@ public sealed class SymbolSourceTool
     }
 
     [McpServerTool(Name = "lavender_get_symbol_source")]
-    [Description("Gets the source declaration for a symbol ID from the currently indexed C# project. Call lavender_index_project first.")]
+    [Description("Gets the source declaration for a symbol ID from the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
     public async Task<SymbolSourceToolResult> GetSymbolSourceAsync(
         [Description("Symbol ID returned by lavender_find_symbols.")]
         string symbolId,
@@ -116,3 +116,4 @@ public sealed record SymbolSourceSummary(
             Signature: source.Signature,
             SourceCode: SymbolSourceTool.TruncateSource(source.SourceCode));
 }
+

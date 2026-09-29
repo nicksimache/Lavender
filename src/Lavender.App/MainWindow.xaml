@@ -15,6 +15,15 @@
         Foreground="#CCCCCC"
         FontFamily="Bahnschrift">
 
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.Save"
+                        Executed="SaveFile_Executed"
+                        CanExecute="SaveFile_CanExecute"/>
+    </Window.CommandBindings>
+    <Window.InputBindings>
+        <KeyBinding Key="S" Modifiers="Control" Command="ApplicationCommands.Save"/>
+    </Window.InputBindings>
+
     <Window.Resources>
         <SolidColorBrush x:Key="AppBackground" Color="#181818"/>
         <SolidColorBrush x:Key="PanelBackground" Color="#1F1F1F"/>
@@ -322,6 +331,10 @@
                     <TextBlock Text="Edit" Margin="0,0,18,0" Foreground="#BEBEBE" FontSize="12"/>
                     <TextBlock Text="View" Margin="0,0,18,0" Foreground="#BEBEBE" FontSize="12"/>
                     <TextBlock Text="Help" Foreground="#BEBEBE" FontSize="12"/>
+                    <Button Content="Save" Margin="16,0,0,0" Padding="10,2"
+                            Command="ApplicationCommands.Save"
+                            CommandTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
+                            ToolTip="Save current file (Ctrl+S)"/>
                 </StackPanel>
 
                 <TextBlock Grid.Column="2"
@@ -421,26 +434,15 @@
                         Background="#181818"
                         BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="0,0,0,1">
-                    <Border Width="220"
-                            HorizontalAlignment="Left"
-                            Background="{StaticResource EditorBackground}"
-                            BorderBrush="{StaticResource AccentBrush}"
-                            BorderThickness="0,0,0,1"
-                            Padding="14,0">
-                        <Grid>
-                            <TextBlock x:Name="PreviewFileNameText"
-                                       Text="No file selected"
-                                       Foreground="#D4D4D4"
-                                       FontSize="12"
-                                       VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis"/>
-                            <TextBlock Text="×"
-                                       Foreground="#8C8C8C"
-                                       FontSize="15"
-                                       HorizontalAlignment="Right"
-                                       VerticalAlignment="Center"/>
-                        </Grid>
-                    </Border>
+                    <ListBox x:Name="OpenFileTabs" Background="Transparent" BorderThickness="0"
+                             SelectionChanged="OpenFileTabs_SelectionChanged"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                        <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate><DataTemplate>
+                            <TextBlock Text="{Binding Header}" ToolTip="{Binding FullPath}" Margin="10,5" Foreground="#D4D4D4"/>
+                        </DataTemplate></ListBox.ItemTemplate>
+                    </ListBox>
                 </Border>
 
                 <editor:TextEditor x:Name="FilePreviewBox"
@@ -478,6 +480,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <DockPanel Margin="0,4">
                             <Button x:Name="NewChatButton" DockPanel.Dock="Right" Content="New chat" Click="NewChat_Click" Padding="6,3"/>
@@ -494,6 +497,13 @@
                             <TextBlock x:Name="AgentStatusText" Text="Starting…" FontSize="11"
                                        Foreground="{StaticResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
+                        <Expander Grid.Row="2" Header="Agent activity" Margin="0,0,0,4"
+                                  Foreground="#BBBBBB" IsExpanded="False">
+                            <TextBox x:Name="AgentActivityLog" Height="170" IsReadOnly="True"
+                                     AcceptsReturn="True" TextWrapping="Wrap" FontSize="11"
+                                     VerticalScrollBarVisibility="Auto"
+                                     ToolTip="Progress and tool outcomes, not private model reasoning"/>
+                        </Expander>
                     </Grid>
                 </Border>
 
@@ -547,7 +557,7 @@
                                      VerticalScrollBarVisibility="Auto"
                                      HorizontalScrollBarVisibility="Disabled"
                                      VerticalContentAlignment="Top"
-                                     KeyDown="UserInputBox_KeyDown"/>
+                                     PreviewKeyDown="UserInputBox_KeyDown"/>
 
                             <Button x:Name="SendButton"
                                     Grid.Column="1"
@@ -623,4 +633,6 @@
         </Grid>
     </Grid>
 </Window>
+
+
 

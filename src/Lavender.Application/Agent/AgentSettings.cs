@@ -5,8 +5,8 @@ namespace Lavender.Application.Agent;
 public sealed class AgentSettings
 {
     public string Model { get; init; } = "gpt-4.1-mini";
-    public int MaxIterations { get; init; } = 8;
-    public int MaxToolCalls { get; init; } = 16;
+    public int MaxIterations { get; init; } = 100;
+    public int MaxToolCalls { get; init; } = 300;
     public int ToolTimeoutSeconds { get; init; } = 30;
     public int MaxToolResultCharacters { get; init; } = 50_000;
     public int MaxConversationTurns { get; init; } = 10;
@@ -52,3 +52,4 @@ public sealed class AgentSettings
         }
     }
 }
+

@@ -28,6 +28,9 @@ namespace Lavender.App
     {
 
         private string? currSelectedFile;
+        private readonly System.Collections.ObjectModel.ObservableCollection<OpenFileTab> _openFiles = new();
+        private readonly LinkedList<string> _recentFiles = new(); // Most recent path first; no duplicates.
+        private OpenFileTab? _activeFile;
         private string? _selectedProjectPath;
         private string? _selectedSolutionPath;
         private static readonly HashSet<string> ExplorerFileExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -75,6 +78,7 @@ namespace Lavender.App
         {
             InitializeComponent();
             ConfigureCodeEditor();
+            OpenFileTabs.ItemsSource = _openFiles;
 
             AgentSettings settings = AgentSettings.Load();
             settings.Validate();
@@ -86,7 +90,12 @@ namespace Lavender.App
                 model,
                 _mcpClient,
                 _conversations);
-            _agentRunner.Progress += status => Dispatcher.InvokeAsync(() => AgentStatusText.Text = status);
+            _agentRunner.Progress += status => Dispatcher.InvokeAsync(() =>
+            {
+                AgentStatusText.Text = status;
+                AppendAgentActivity(status);
+            });
+            _agentRunner.ToolCompleted += record => Dispatcher.InvokeAsync(() => AppendToolActivity(record));
 
             Loaded += MainWindow_Loaded;
         }
@@ -215,7 +224,8 @@ namespace Lavender.App
 
                 foreach (string diagnostic in result.ToolDiagnostics ?? [])
                 {
-                    AddMessageBubble($"Tool error: {diagnostic}", false);
+                    // Lets ignore this for now
+                    // AddMessageBubble($"Tool error: {diagnostic}", false);
                 }
 
                 AddMessageBubble(result.FinalAnswer, false);
@@ -224,16 +234,7 @@ namespace Lavender.App
                     FolderView.Items.Clear();
                     TreeViewItem? root = BuildDisplayableExplorerDirectory(_selectedProjectPath, includeIfEmpty: true);
                     if (root is not null) { FolderView.Items.Add(root); root.IsExpanded = true; }
-                    if (currSelectedFile is not null)
-                    {
-                        if (File.Exists(currSelectedFile)) ShowCodeInPreview(await File.ReadAllTextAsync(currSelectedFile));
-                        else
-                        {
-                            currSelectedFile = null;
-                            PreviewFileNameText.Text = "No file selected";
-                            FilePreviewBox.Clear();
-                        }
-                    }
+                    foreach (var tab in _openFiles) tab.ReloadIfClean();
                     if (contextFiles.RemoveAll(path => !File.Exists(path)) > 0) await SaveContextFilesAsync();
                 }
             }
@@ -412,8 +413,6 @@ namespace Lavender.App
                 SetBusy(false);
                 chatReleased = true;
                 await indexing;
-                if (!string.IsNullOrWhiteSpace(_mcpClient.LastIndexingSummary))
-                    AddMessageBubble(_mcpClient.LastIndexingSummary, false);
                 if (_activeRun is null) AgentStatusText.Text = $"Ready — {Path.GetFileName(selectedPath)}";
             }
             catch (OperationCanceledException) when (_windowLifetime.IsCancellationRequested) { }
@@ -466,6 +465,7 @@ namespace Lavender.App
 
         private void ShowConversation(Conversation chat)
         {
+            AgentActivityLog.Clear();
             _activeConversationId = chat.Id;
             contextFiles.Clear();
             if (_selectedProjectPath is not null)
@@ -477,10 +477,40 @@ namespace Lavender.App
             ChatMessagesPanel.Children.Clear();
             foreach (ConversationTurn turn in chat.Turns)
             {
+                foreach (var call in turn.Steps.SelectMany(step => step.ToolCalls)) AppendToolActivity(call);
                 AddMessageBubble(turn.UserMessage, true);
                 if (!string.IsNullOrWhiteSpace(turn.AssistantMessage)) AddMessageBubble(turn.AssistantMessage, false);
                 else AddMessageBubble(turn.StopReason ?? "This response was interrupted. You can ask again.", false);
             }
+        }
+
+        private void AppendAgentActivity(string message)
+        {
+            AgentActivityLog.AppendText($"{DateTime.Now:HH:mm:ss}  {message}\n");
+            // Keep the visible log bounded; full tool records remain in chat history.
+            if (AgentActivityLog.Text.Length > 60000)
+                AgentActivityLog.Text = AgentActivityLog.Text[^50000..];
+            AgentActivityLog.ScrollToEnd();
+        }
+
+        private void AppendToolActivity(ToolExecutionRecord record)
+        {
+            string target = "";
+            try
+            {
+                using var args = System.Text.Json.JsonDocument.Parse(record.ArgumentsJson);
+                foreach (string key in new[] { "path", "filePath", "query", "destinationPath", "startLine", "endLine" })
+                    if (args.RootElement.TryGetProperty(key, out var value))
+                    {
+                        string text = value.ToString();
+                        target += $" {key}={text[..Math.Min(text.Length, 250)]}";
+                    }
+            }
+            catch (System.Text.Json.JsonException) { }
+            string outcome = record.OutcomeMessage ?? record.Error ?? "Tool returned a result.";
+            double seconds = ((record.CompletedAt ?? record.StartedAt) - record.StartedAt).TotalSeconds;
+            string message = $"{record.ToolName}{target}\n  {record.Outcome ?? "returned"} ({seconds:F1}s): {outcome[..Math.Min(outcome.Length, 1000)]}";
+            AppendAgentActivity(message);
         }
 
         private async Task RefreshHistoryAsync()
@@ -757,17 +787,47 @@ namespace Lavender.App
 
             if (File.Exists(path) && IsDisplayableExplorerFile(path))
             {
-                currSelectedFile = path;
-
-                PreviewFileNameText.Text = Path.GetFileName(currSelectedFile);
-
-                string code = File.ReadAllText(currSelectedFile);
-                ShowCodeInPreview(code);
+                var tab = _openFiles.FirstOrDefault(t => string.Equals(t.FullPath, Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase));
+                if (tab == null) { tab = new OpenFileTab(path); _openFiles.Add(tab); }
+                OpenFileTabs.SelectedItem = tab;
             }
+        }
+
+        private void OpenFileTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (OpenFileTabs.SelectedItem is not OpenFileTab tab || ReferenceEquals(tab, _activeFile)) return;
+            if (_activeFile != null)
+            {
+                _activeFile.CaretOffset = FilePreviewBox.CaretOffset;
+                _activeFile.VerticalOffset = FilePreviewBox.VerticalOffset;
+                _activeFile.HorizontalOffset = FilePreviewBox.HorizontalOffset;
+            }
+            _activeFile = tab;
+            currSelectedFile = tab.FullPath;
+            FilePreviewBox.Document = tab.Document;
+            FilePreviewBox.Encoding = tab.Encoding;
+            ShowCodeInPreview(tab.Document.Text);
+            FilePreviewBox.CaretOffset = Math.Min(tab.CaretOffset, tab.Document.TextLength);
+            FilePreviewBox.ScrollToVerticalOffset(tab.VerticalOffset);
+            FilePreviewBox.ScrollToHorizontalOffset(tab.HorizontalOffset);
+            var previous = _recentFiles.Find(tab.FullPath);
+            if (previous != null) _recentFiles.Remove(previous);
+            _recentFiles.AddFirst(tab.FullPath);
         }
 
         private void ConfigureCodeEditor()
         {
+            // Space between the line-number gutter and the first code character.
+            FilePreviewBox.TextArea.LeftMargins.Add(new Border { Width = 8 });
+            // Handle this above the editor's own command bindings, regardless of focus.
+            PreviewKeyDown += (_, e) =>
+            {
+                if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
+                {
+                    e.Handled = true;
+                    SaveCurrentFile();
+                }
+            };
             FilePreviewBox.Options.HighlightCurrentLine = true;
             FilePreviewBox.TextArea.TextView.CurrentLineBackground =
                 new SolidColorBrush(Color.FromRgb(21, 21, 21));
@@ -775,6 +835,40 @@ namespace Lavender.App
             FilePreviewBox.TextArea.SelectionBorder = new Pen(Brushes.Transparent, 0);
             FilePreviewBox.TextArea.SelectionBrush = new SolidColorBrush(Color.FromRgb(58, 45, 76));
             FilePreviewBox.TextArea.SelectionForeground = Brushes.White;
+        }
+
+        private void SaveFile_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = FilePreviewBox != null && currSelectedFile != null && File.Exists(currSelectedFile);
+            e.Handled = true;
+        }
+
+        private void SaveFile_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            e.Handled = true;
+            SaveCurrentFile();
+        }
+
+        private void SaveCurrentFile()
+        {
+            if (currSelectedFile == null || !File.Exists(currSelectedFile)) return;
+            try
+            {
+                // Match the existing file's BOM/encoding; save without reloading the editor.
+                using (var reader = new StreamReader(currSelectedFile, new System.Text.UTF8Encoding(false), true))
+                {
+                    reader.Peek();
+                    FilePreviewBox.Encoding = reader.CurrentEncoding;
+                }
+                FilePreviewBox.Save(currSelectedFile);
+                FilePreviewBox.IsModified = false;
+                _activeFile?.MarkSaved();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+            {
+                MessageBox.Show(this, $"Could not save {currSelectedFile}:\n{ex.Message}",
+                    "Save failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void ShowCodeInPreview(string code)
@@ -797,7 +891,7 @@ namespace Lavender.App
                 }
             }
             FilePreviewBox.SyntaxHighlighting = definition;
-            FilePreviewBox.Text = code;
+            // The selected tab owns the document; switching never replaces its text.
         }
         private void FolderView_PreviewMouseMove(object sender, MouseEventArgs e)
         {
@@ -861,4 +955,6 @@ namespace Lavender.App
 
     }
 }
+
+
 

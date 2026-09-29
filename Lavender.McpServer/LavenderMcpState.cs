@@ -16,7 +16,7 @@ public sealed class LavenderMcpState : IDisposable
     public bool RequiresReindex { get; private set; }
     public string NotReadyMessage => IsIndexing
         ? "Structural indexing is still running. Use semantic search or source reading in the meantime; do not start duplicate indexing."
-        : RequiresReindex ? "Project files changed. Read source directly or call lavender_index_project to refresh the index."
+        : RequiresReindex ? "Project files changed. Read source directly until Lavender refreshes the index on project load."
         : IndexingError is not null ? $"Indexing failed: {IndexingError}. Source reading remains available."
         : "No project is indexed. Open a project first.";
 
@@ -100,3 +100,4 @@ public sealed class LavenderMcpState : IDisposable
         _projectIndexer.Dispose();
     }
 }
+

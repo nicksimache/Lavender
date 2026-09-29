@@ -20,7 +20,7 @@ public sealed class SymbolRelationshipTools
     }
 
     [McpServerTool(Name = "lavender_get_callers")]
-    [Description("Gets symbols that call the given symbol in the currently indexed C# project. Call lavender_index_project first.")]
+    [Description("Gets symbols that call the given symbol in the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
     public RelationshipToolResult GetCallers(
         [Description("Symbol ID returned by lavender_find_symbols.")]
         string symbolId,
@@ -32,7 +32,7 @@ public sealed class SymbolRelationshipTools
     }
 
     [McpServerTool(Name = "lavender_get_callees")]
-    [Description("Gets symbols called by the given symbol in the currently indexed C# project. Call lavender_index_project first.")]
+    [Description("Gets symbols called by the given symbol in the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
     public RelationshipToolResult GetCallees(
         [Description("Symbol ID returned by lavender_find_symbols.")]
         string symbolId,
@@ -157,3 +157,4 @@ public sealed record RelationshipSummary(
             TargetDisplayName: relationship.TargetDisplayName,
             IsTargetExternal: relationship.IsTargetExternal);
 }
+

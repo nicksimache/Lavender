@@ -8,7 +8,9 @@ namespace Lavender.Infrastructure.FileSystem;
 public sealed record ProjectFileRead(string Path, string ContentHash, int LineCount, string Encoding, string Content);
 public sealed record ProjectFileEdit(string Path, string? DestinationPath, string? ContentHash, string? BackupPath, bool Changed);
 
-/// <summary>Project-scoped edits guarded by the hash returned by ReadAsync.</summary>
+/// <summary>
+/// Project-scoped edits guarded by the hash returned by ReadAsync.
+/// </summary>
 public sealed class ProjectFileEditor(string projectRoot, string? backupDirectory = null)
 {
     private readonly string _root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectRoot));
