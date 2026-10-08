@@ -1,12 +1,11 @@
 using Lavender.Infrastructure.Indexing.Relationships;
 using Lavender.Infrastructure.Knowledge;
-using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace Lavender.McpServer.Tools;
 
-[McpServerToolType]
+// Disabled alongside graph generation; omit MCP attributes to prevent tool discovery.
 public sealed class SymbolRelationshipTools
 {
     private const int DefaultLimit = 50;
@@ -19,7 +18,6 @@ public sealed class SymbolRelationshipTools
         _state = state;
     }
 
-    [McpServerTool(Name = "lavender_get_callers")]
     [Description("Gets symbols that call the given symbol in the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
     public RelationshipToolResult GetCallers(
         [Description("Symbol ID returned by lavender_find_symbols.")]
@@ -31,7 +29,6 @@ public sealed class SymbolRelationshipTools
         return GetRelationships(symbolId, limit, RelationshipDirection.Callers);
     }
 
-    [McpServerTool(Name = "lavender_get_callees")]
     [Description("Gets symbols called by the given symbol in the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
     public RelationshipToolResult GetCallees(
         [Description("Symbol ID returned by lavender_find_symbols.")]

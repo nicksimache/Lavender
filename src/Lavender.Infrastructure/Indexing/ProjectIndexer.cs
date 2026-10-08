@@ -3,8 +3,6 @@ using Lavender.Diagnostics;
 using Lavender.Git;
 using Lavender.Infrastructure.Backend;
 using Lavender.Infrastructure.Indexing.Chunking;
-using Lavender.Infrastructure.Indexing.Dependencies;
-using Lavender.Infrastructure.Indexing.Relationships;
 using Lavender.Infrastructure.Indexing.Symbol;
 using Lavender.Infrastructure.Knowledge;
 using Lavender.Infrastructure.Source;
@@ -62,22 +60,17 @@ public sealed class ProjectIndexer : IDisposable
                 symbols = await new SymbolIndexingService(identity).IndexAsync(newContext, cancellationToken);
             timings.SymbolCount = symbols.Symbols.Count;
 
-            CodeRelationshipGraph relationships;
-            using (timings.Stage("Build relationship graph"))
-                relationships = await new CodeRelationshipIndexer(identity).IndexAsync(newContext, symbols, cancellationToken);
-            ProjectDependencyGraph dependencies;
-            using (timings.Stage("Build dependency graph"))
-                dependencies = new ProjectDependencyIndexer().Index(newContext);
+            // Graph generation is disabled while the graph tools are not in use.
 
             ProjectKnowledgeService knowledgeService;
             using (timings.Stage("Create query services"))
                 knowledgeService = new ProjectKnowledgeService(
                 symbols,
                 new SymbolSourceService(symbols, newContext),
-                relationships,
+                relationships: null,
                 new RoslynDiagnosticsProvider(newContext, identity),
                 new GitContextService(projectPath),
-                dependencies);
+                dependencies: null);
 
             // Publish the new index only after both code and vector indexing succeed.
             using (timings.Stage("Publish index and dispose previous workspace"))

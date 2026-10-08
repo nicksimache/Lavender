@@ -27,18 +27,18 @@ public sealed class ProjectKnowledgeService : IProjectKnowledgeService
 {
     private readonly SymbolIndex _symbols;
     private readonly ISymbolSourceService _source;
-    private readonly CodeRelationshipGraph _relationships;
+    private readonly CodeRelationshipGraph? _relationships;
     private readonly RoslynDiagnosticsProvider _diagnostics;
     private readonly GitContextService _git;
-    private readonly ProjectDependencyGraph _dependencies;
+    private readonly ProjectDependencyGraph? _dependencies;
 
     public ProjectKnowledgeService(
         SymbolIndex symbols,
         ISymbolSourceService source,
-        CodeRelationshipGraph relationships,
+        CodeRelationshipGraph? relationships,
         RoslynDiagnosticsProvider diagnostics,
         GitContextService git,
-        ProjectDependencyGraph dependencies)
+        ProjectDependencyGraph? dependencies)
     {
         _symbols = symbols;
         _source = source;
@@ -51,11 +51,14 @@ public sealed class ProjectKnowledgeService : IProjectKnowledgeService
     public IReadOnlyList<CodeSymbol> FindSymbols(string query) => _symbols.Find(query);
     public Task<SymbolSourceResult?> GetSymbolSourceAsync(string id, CancellationToken token = default) => _source.GetSourceBySymbolIdAsync(id, token);
     public Task<IReadOnlyList<SymbolSourceResult>> GetAllSymbolDeclarationsAsync(string id, CancellationToken token = default) => _source.GetAllDeclarationsAsync(id, token);
-    public IReadOnlyList<CodeRelationship> GetRelationships(string id, CodeRelationshipType? type = null) => _relationships.GetOutgoingRelationships(id, type);
-    public IReadOnlyList<CodeRelationship> GetCallers(string id) => _relationships.GetCallers(id);
-    public IReadOnlyList<CodeRelationship> GetCallees(string id) => _relationships.GetCallees(id);
+    private CodeRelationshipGraph Relationships => _relationships
+        ?? throw new InvalidOperationException("Code relationship graph generation is disabled.");
+    public IReadOnlyList<CodeRelationship> GetRelationships(string id, CodeRelationshipType? type = null) => Relationships.GetOutgoingRelationships(id, type);
+    public IReadOnlyList<CodeRelationship> GetCallers(string id) => Relationships.GetCallers(id);
+    public IReadOnlyList<CodeRelationship> GetCallees(string id) => Relationships.GetCallees(id);
     public Task<IReadOnlyList<ProjectDiagnostic>> GetDiagnosticsAsync(CancellationToken token = default) => _diagnostics.GetSolutionDiagnosticsAsync(token);
     public Task<GitRepositoryStatus> GetGitStatusAsync(CancellationToken token = default) => _git.GetStatusAsync(token);
     public Task<GitDiffResult> GetGitDiffAsync(string? path = null, bool staged = false, CancellationToken token = default) => staged ? _git.GetStagedDiffAsync(path, token) : _git.GetWorkingTreeDiffAsync(path, token);
-    public IReadOnlyList<ProjectDependencyEdge> GetProjectDependencies(string id) => _dependencies.GetDependencies(id);
+    public IReadOnlyList<ProjectDependencyEdge> GetProjectDependencies(string id) => (_dependencies
+        ?? throw new InvalidOperationException("Project dependency graph generation is disabled.")).GetDependencies(id);
 }
