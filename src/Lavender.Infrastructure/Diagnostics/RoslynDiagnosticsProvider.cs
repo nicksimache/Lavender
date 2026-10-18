@@ -43,13 +43,17 @@ public sealed class RoslynDiagnosticsProvider
         return result;
     }
 
-    public async Task<IReadOnlyList<ProjectDiagnostic>> GetProjectDiagnosticsAsync(string projectIdOrName, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProjectDiagnostic>> GetProjectDiagnosticsAsync(
+        string projectIdOrName,
+        CancellationToken cancellationToken = default)
     {
         Project? project = _context.Solution.Projects.FirstOrDefault(p => p.Id.Id.ToString() == projectIdOrName || p.Name.Equals(projectIdOrName, StringComparison.OrdinalIgnoreCase));
         return project is null ? Array.Empty<ProjectDiagnostic>() : await GetProjectAsync(project, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ProjectDiagnostic>> GetDocumentDiagnosticsAsync(string filePath, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ProjectDiagnostic>> GetDocumentDiagnosticsAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
     {
         string fullPath = Path.GetFullPath(filePath);
         var all = await GetSolutionDiagnosticsAsync(cancellationToken);

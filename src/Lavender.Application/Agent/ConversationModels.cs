@@ -1,5 +1,6 @@
 namespace Lavender.Application.Agent;
 
+/// <summary>Saved discussion for a project: each turn contains model steps and their tool-call records.</summary>
 public sealed class Conversation
 {
     public required Guid Id { get; init; }
@@ -34,6 +35,7 @@ public sealed class AgentStep
     public List<ToolExecutionRecord> ToolCalls { get; init; } = [];
 }
 
+/// <summary>Audit record of a requested tool call; a returned result alone does not prove an edit succeeded.</summary>
 public sealed class ToolExecutionRecord
 {
     public required string CallId { get; init; }
@@ -69,7 +71,10 @@ public sealed record AgentRunResult(
 public interface IConversationStore
 {
     Task<Conversation> CreateAsync(CancellationToken cancellationToken = default);
+
     Task<Conversation?> LoadAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task SaveAsync(Conversation conversation, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Conversation>> ListAsync(string? projectPath, CancellationToken cancellationToken = default);
 }

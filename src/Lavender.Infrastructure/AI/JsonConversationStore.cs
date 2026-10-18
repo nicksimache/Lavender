@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace Lavender.Infrastructure.AI;
 
+/// <summary>Caches conversations by ID and optionally persists each one as a JSON file.</summary>
 public sealed class JsonConversationStore : IConversationStore
 {
     private readonly string _directory;
@@ -44,12 +45,15 @@ public sealed class JsonConversationStore : IConversationStore
         await _fileLock.WaitAsync(cancellationToken);
         try
         {
-            if (_memory.TryGetValue(id, out Conversation? cached)) return cached;
-            if (!_persist || !File.Exists(path)) return null;
+            if (_memory.TryGetValue(id, out Conversation? cached))
+                return cached;
+            if (!_persist || !File.Exists(path))
+                return null;
             await using FileStream stream = File.OpenRead(path);
             Conversation? loaded = await JsonSerializer.DeserializeAsync<Conversation>(
                 stream, _jsonOptions, cancellationToken);
-            if (loaded is not null) _memory[id] = loaded;
+            if (loaded is not null)
+                _memory[id] = loaded;
             return loaded;
         }
         finally
@@ -70,13 +74,15 @@ public sealed class JsonConversationStore : IConversationStore
         {
             conversation.ProjectPath = NormalizeProjectPath(conversation.ProjectPath);
             _memory[conversation.Id] = conversation;
-            if (!_persist) return;
+            if (!_persist)
+                return;
             Directory.CreateDirectory(_directory);
             await using (FileStream stream = File.Create(temporaryPath))
             {
                 await JsonSerializer.SerializeAsync(
                     stream, conversation, _jsonOptions, cancellationToken);
             }
+            // Replace the saved file only after serialization has completed successfully.
             File.Move(temporaryPath, path, true);
         }
         finally
@@ -88,15 +94,21 @@ public sealed class JsonConversationStore : IConversationStore
     private string GetPath(Guid id) =>
         Path.Combine(_directory, $"{id:N}.json");
 
-    public async Task<IReadOnlyList<Conversation>> ListAsync(string? projectPath, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Conversation>> ListAsync(
+        string? projectPath,
+        CancellationToken cancellationToken = default)
     {
         projectPath = NormalizeProjectPath(projectPath);
         if (_persist && Directory.Exists(_directory))
         {
             foreach (string path in Directory.EnumerateFiles(_directory, "*.json"))
             {
-                if (!Guid.TryParse(Path.GetFileNameWithoutExtension(path), out Guid id)) continue;
-                try { await LoadAsync(id, cancellationToken); }
+                if (!Guid.TryParse(Path.GetFileNameWithoutExtension(path), out Guid id))
+                    continue;
+                try
+                {
+                    await LoadAsync(id, cancellationToken);
+                }
                 catch (JsonException) { /* One damaged history must not hide the others. */ }
                 catch (IOException) { }
             }
@@ -107,7 +119,10 @@ public sealed class JsonConversationStore : IConversationStore
             return _memory.Values.Where(c => string.Equals(NormalizeProjectPath(c.ProjectPath), projectPath,
                 StringComparison.OrdinalIgnoreCase)).OrderByDescending(c => c.UpdatedAt).ToArray();
         }
-        finally { _fileLock.Release(); }
+        finally
+        {
+            _fileLock.Release();
+        }
     }
 
     public static string? NormalizeProjectPath(string? path) => string.IsNullOrWhiteSpace(path)
@@ -130,6 +145,9 @@ public sealed class JsonConversationStore : IConversationStore
                 _memory.Remove(chat.Id);
             }
         }
-        finally { _fileLock.Release(); }
+        finally
+        {
+            _fileLock.Release();
+        }
     }
 }

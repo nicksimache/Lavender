@@ -2,13 +2,19 @@ using Lavender.Infrastructure.FileSystem;
 
 namespace Lavender.McpServer.Tools.Editing;
 
+/// <summary>Converts expected file-operation failures into tool results; cancellation still propagates.</summary>
 internal static class FileToolExecution
 {
     public static async Task<FileToolResult> RunAsync(string path, Func<Task<FileToolResult>> operation)
     {
-        try { return await operation(); }
+        try
+        {
+            return await operation();
+        }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
-        { return new(false, false, "failed", ex.Message, path); }
+        {
+            return new(false, false, "failed", ex.Message, path);
+        }
     }
 
     public static FileToolResult Result(ProjectFileEdit edit, string status) =>

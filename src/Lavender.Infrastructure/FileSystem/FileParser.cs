@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Lavender.Infrastructure.FileSystem
 {
+    // Used by the legacy PromptBuilder; active agent reads go through MCP file tools.
     internal class FileParser
     {
         public string ReadFile(string path)

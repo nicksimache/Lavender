@@ -3,6 +3,7 @@ using System.Text.Json;
 
 namespace Lavender.Infrastructure.Indexing;
 
+/// <summary>Writes cumulative timing reports as stages finish, including partial results on failure.</summary>
 public sealed class IndexingTimings
 {
     public static string ReportDirectory => Environment.GetEnvironmentVariable("LAVENDER_INDEX_REPORT_DIRECTORY")
@@ -29,6 +30,7 @@ public sealed class IndexingTimings
         Save();
     }
 
+    // A using scope measures a stage even when its operation throws.
     public IDisposable Stage(string name) => new Measurement(this, name);
 
     public void Finish()
@@ -47,7 +49,9 @@ public sealed class IndexingTimings
             File.WriteAllText(ReportPath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        { LoggingError = ex.Message; }
+        {
+            LoggingError = ex.Message;
+        }
     }
 
     public string Summary() => $"Indexing {Status.ToLowerInvariant()} in {TotalMilliseconds / 1000:F2}s; " +
@@ -59,6 +63,7 @@ public sealed class IndexingTimings
     private sealed class Measurement(IndexingTimings owner, string name) : IDisposable
     {
         private readonly Stopwatch _watch = Stopwatch.StartNew();
+
         public void Dispose()
         {
             _watch.Stop();

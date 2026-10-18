@@ -69,12 +69,20 @@ public sealed class GitContextService
         CommandResult root = await RunAsync(new[] { "rev-parse", "--show-toplevel" }, token);
         if (root.StartError is not null)
         {
-            return new() { IsGitAvailable = false, Error = root.StartError };
+            return new()
+            {
+                IsGitAvailable = false,
+                Error = root.StartError
+            };
         }
 
         if (root.ExitCode != 0)
         {
-            return new() { IsRepository = false, Error = root.Error.Trim() };
+            return new()
+            {
+                IsRepository = false,
+                Error = root.Error.Trim()
+            };
         }
 
         string repo = root.Output.Trim();
@@ -83,14 +91,30 @@ public sealed class GitContextService
 
         if (status.ExitCode != 0)
         {
-            return new() { IsRepository = true, RepositoryRoot = repo, Error = status.Error.Trim() };
+            return new()
+            {
+                IsRepository = true,
+                RepositoryRoot = repo,
+                Error = status.Error.Trim()
+            };
         }
 
-        return new() { IsRepository = true, RepositoryRoot = repo, Branch = branch.Output.Trim(), Files = ParseStatus(status.Output) };
+        return new()
+        {
+            IsRepository = true,
+            RepositoryRoot = repo,
+            Branch = branch.Output.Trim(),
+            Files = ParseStatus(status.Output)
+        };
     }
 
-    public Task<GitDiffResult> GetWorkingTreeDiffAsync(string? relativeFilePath = null, CancellationToken token = default) => GetDiffAsync(false, relativeFilePath, token);
-    public Task<GitDiffResult> GetStagedDiffAsync(string? relativeFilePath = null, CancellationToken token = default) => GetDiffAsync(true, relativeFilePath, token);
+    public Task<GitDiffResult> GetWorkingTreeDiffAsync(
+        string? relativeFilePath = null,
+        CancellationToken token = default) =>
+        GetDiffAsync(false, relativeFilePath, token);
+
+    public Task<GitDiffResult> GetStagedDiffAsync(string? relativeFilePath = null, CancellationToken token = default) =>
+        GetDiffAsync(true, relativeFilePath, token);
 
     private async Task<GitDiffResult> GetDiffAsync(bool staged, string? file, CancellationToken token)
     {
@@ -214,26 +238,39 @@ public sealed class GitContextService
         var stopwatch = Stopwatch.StartNew();
         void Report(string status, int? exitCode, string stdout, string stderr)
         {
-            if (diagnosticPath is null) return;
+            if (diagnosticPath is null)
+                return;
             try
             {
                 File.WriteAllText(diagnosticPath, JsonSerializer.Serialize(new
                 {
-                    Command = command, Executable = executable, WorkingDirectory = _workingDirectory, Status = status,
-                    ElapsedMilliseconds = stopwatch.Elapsed.TotalMilliseconds, ExitCode = exitCode,
-                    OutputCharacters = stdout.Length, Error = stderr[..Math.Min(stderr.Length, 8000)],
+                    Command = command,
+                    Executable = executable,
+                    WorkingDirectory = _workingDirectory,
+                    Status = status,
+                    ElapsedMilliseconds = stopwatch.Elapsed.TotalMilliseconds,
+                    ExitCode = exitCode,
+                    OutputCharacters = stdout.Length,
+                    Error = stderr[..Math.Min(stderr.Length, 8000)],
                     TracePath = tracePath
                 }, new JsonSerializerOptions { WriteIndented = true }));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
         }
-        var psi = new ProcessStartInfo(executable) { WorkingDirectory = _workingDirectory,
-            RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true,
-            UseShellExecute = false, CreateNoWindow = true };
+        var psi = new ProcessStartInfo(executable)
+        {
+            WorkingDirectory = _workingDirectory,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
         psi.ArgumentList.Add("--no-pager");
         psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
         psi.Environment["GIT_OPTIONAL_LOCKS"] = "0";
-        if (tracePath is not null) psi.Environment["GIT_TRACE2_EVENT"] = tracePath.Replace('\\', '/');
+        if (tracePath is not null)
+            psi.Environment["GIT_TRACE2_EVENT"] = tracePath.Replace('\\', '/');
         foreach (string arg in arguments)
         {
             psi.ArgumentList.Add(arg);
@@ -260,10 +297,17 @@ public sealed class GitContextService
         Task<string> error = process.StandardError.ReadToEndAsync();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token);
         deadline.CancelAfter(TimeSpan.FromSeconds(10));
-        try { await process.WaitForExitAsync(deadline.Token); }
+        try
+        {
+            await process.WaitForExitAsync(deadline.Token);
+        }
         catch (OperationCanceledException)
         {
-            try { if (!process.HasExited) process.Kill(entireProcessTree: true); }
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
             catch (InvalidOperationException) { }
             await process.WaitForExitAsync(CancellationToken.None);
             await Task.WhenAll(output, error);
@@ -278,13 +322,16 @@ public sealed class GitContextService
 
     internal static string ResolveGitExecutable(string? searchPath = null)
     {
-        if (!OperatingSystem.IsWindows()) return "git";
+        if (!OperatingSystem.IsWindows())
+            return "git";
         foreach (string entry in (searchPath ?? Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
         {
             string directory = Environment.ExpandEnvironmentVariables(entry.Trim().Trim('"'));
-            if (!Path.IsPathRooted(directory)) continue;
+            if (!Path.IsPathRooted(directory))
+                continue;
             string candidate = Path.Combine(directory, "git.exe");
-            if (!File.Exists(candidate)) continue;
+            if (!File.Exists(candidate))
+                continue;
             // cmd/git.exe is Git for Windows' launcher. Invoke the real binary directly in
             // detached MCP processes; it can otherwise stall before Git initializes tracing.
             if (Path.GetFileName(Path.TrimEndingDirectorySeparator(directory)).Equals("cmd", StringComparison.OrdinalIgnoreCase))
@@ -293,7 +340,8 @@ public sealed class GitContextService
                 foreach (string architecture in new[] { "mingw64", "mingw32" })
                 {
                     string binary = Path.Combine(installation, architecture, "bin", "git.exe");
-                    if (File.Exists(binary)) return binary;
+                    if (File.Exists(binary))
+                        return binary;
                 }
             }
             return candidate;

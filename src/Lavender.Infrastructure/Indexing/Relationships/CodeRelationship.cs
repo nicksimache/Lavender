@@ -1,6 +1,9 @@
 namespace Lavender.Infrastructure.Indexing.Relationships;
 
-public enum CodeRelationshipType { InheritsFrom, Implements, Calls, UsesType }
+public enum CodeRelationshipType
+{
+    InheritsFrom, Implements, Calls, UsesType
+}
 
 public sealed class CodeRelationship
 {

@@ -6,6 +6,7 @@ using Lavender.Infrastructure.FileSystem;
 
 namespace Lavender.Infrastructure.Retrieval
 {
+    // Legacy keyword retrieval; current agent discovery uses MCP search/read tools.
     internal class ProjectSearchService
     {
         private readonly ProjectScanner _projectScanner;

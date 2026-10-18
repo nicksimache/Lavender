@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +9,7 @@ using Microsoft.CodeAnalysis.MSBuild;
 
 namespace Lavender.src.Lavender.Infrastructure.FileSystem
 {
+    // Legacy one-shot loader. Active indexing keeps its workspace alive in IndexedProjectContext.
     public class SolutionLoader
     {
         public static async Task<Project> LoadProjectAsync(

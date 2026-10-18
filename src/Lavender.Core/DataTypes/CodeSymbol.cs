@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Lavender.Core.DataTypes
 {
     /// <summary>
-    /// 
+    /// Metadata for a C# declaration. Its ID links back to the Roslyn symbol in SymbolIndex.
     /// </summary>
     public class CodeSymbol
     {

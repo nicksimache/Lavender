@@ -49,11 +49,20 @@ public sealed class ProjectDependencyGraph
             .ToArray();
     }
 
-    public IReadOnlyList<ProjectDependencyNode> GetProjects() => _nodes.Values.Where(x => x.NodeType == ProjectDependencyNodeType.Project).ToArray();
-    public IReadOnlyList<ProjectDependencyEdge> GetDependencies(string id) => _edges.Where(x => x.SourceNodeId == id).ToArray();
-    public IReadOnlyList<ProjectDependencyEdge> GetDependents(string id) => _edges.Where(x => x.TargetNodeId == id).ToArray();
-    public IReadOnlyList<ProjectDependencyNode> GetProjectReferences(string id) => Targets(id, ProjectDependencyType.ReferencesProject);
-    public IReadOnlyList<ProjectDependencyNode> GetPackages(string id) => Targets(id, ProjectDependencyType.ReferencesPackage);
+    public IReadOnlyList<ProjectDependencyNode> GetProjects() =>
+        _nodes.Values.Where(x => x.NodeType == ProjectDependencyNodeType.Project).ToArray();
+
+    public IReadOnlyList<ProjectDependencyEdge> GetDependencies(string id) =>
+        _edges.Where(x => x.SourceNodeId == id).ToArray();
+
+    public IReadOnlyList<ProjectDependencyEdge> GetDependents(string id) =>
+        _edges.Where(x => x.TargetNodeId == id).ToArray();
+
+    public IReadOnlyList<ProjectDependencyNode> GetProjectReferences(string id) =>
+        Targets(id, ProjectDependencyType.ReferencesProject);
+
+    public IReadOnlyList<ProjectDependencyNode> GetPackages(string id) =>
+        Targets(id, ProjectDependencyType.ReferencesPackage);
 
     private IReadOnlyList<ProjectDependencyNode> Targets(string id, ProjectDependencyType type) =>
         _edges
@@ -92,7 +101,12 @@ public sealed class ProjectDependencyIndexer
                 TargetFramework = framework
             };
 
-            edges.Add(new() { SourceNodeId = solutionId, TargetNodeId = id, DependencyType = ProjectDependencyType.Contains });
+            edges.Add(new()
+            {
+                SourceNodeId = solutionId,
+                TargetNodeId = id,
+                DependencyType = ProjectDependencyType.Contains
+            });
 
             foreach (ProjectReference reference in project.ProjectReferences)
             {

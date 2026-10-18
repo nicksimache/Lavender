@@ -19,10 +19,13 @@ public sealed class SymbolSourceResult
 public interface ISymbolSourceService
 {
     Task<SymbolSourceResult?> GetSourceBySymbolIdAsync(string symbolId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<SymbolSourceResult>> GetAllDeclarationsAsync(string symbolId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SymbolSourceResult>> GetAllDeclarationsAsync(
+        string symbolId,
+        CancellationToken cancellationToken = default);
 }
 
-/// <summary>Reads current declaration syntax directly from Roslyn syntax references.</summary>
+/// <summary>Reads declaration syntax from the indexed Roslyn snapshot, not directly from the current disk file.</summary>
 public sealed class SymbolSourceService : ISymbolSourceService
 {
     private readonly SymbolIndex _index;
@@ -34,10 +37,14 @@ public sealed class SymbolSourceService : ISymbolSourceService
         _context = context;
     }
 
-    public async Task<SymbolSourceResult?> GetSourceBySymbolIdAsync(string symbolId, CancellationToken cancellationToken = default) =>
+    public async Task<SymbolSourceResult?> GetSourceBySymbolIdAsync(
+        string symbolId,
+        CancellationToken cancellationToken = default) =>
         (await GetAllDeclarationsAsync(symbolId, cancellationToken)).FirstOrDefault();
 
-    public async Task<IReadOnlyList<SymbolSourceResult>> GetAllDeclarationsAsync(string symbolId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SymbolSourceResult>> GetAllDeclarationsAsync(
+        string symbolId,
+        CancellationToken cancellationToken = default)
     {
         ISymbol? symbol = _index.GetRoslynSymbol(symbolId);
         if (symbol is null || symbol.DeclaringSyntaxReferences.Length == 0)

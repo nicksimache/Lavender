@@ -63,6 +63,10 @@
               "target": "Package",
               "version": "[5.6.0, )"
             },
+            "Microsoft.CodeAnalysis.CSharp.Features": {
+              "target": "Package",
+              "version": "[5.6.0, )"
+            },
             "Microsoft.CodeAnalysis.CSharp.Workspaces": {
               "target": "Package",
               "version": "[5.6.0, )"

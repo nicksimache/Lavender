@@ -3,6 +3,7 @@ using Lavender.Infrastructure.FileSystem;
 
 namespace Lavender.Application.Chat
 {
+    // Legacy prompt assembly. The active chat path builds messages in AgentRunner.
     internal class PromptBuilder
     {
         private readonly FileParser _fileParser;

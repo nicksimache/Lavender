@@ -19,7 +19,11 @@ public sealed class ProjectIndexer : IDisposable
     public ProjectKnowledgeService? KnowledgeService { get; private set; }
     public IndexingTimings? LastTimings { get; private set; }
 
-    public async Task IndexProjectAsync(string projectPath, string solutionPath, string indexId, CancellationToken cancellationToken = default)
+    public async Task IndexProjectAsync(
+        string projectPath,
+        string solutionPath,
+        string indexId,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionPath);
@@ -52,6 +56,7 @@ public sealed class ProjectIndexer : IDisposable
                 await FastApiService.Instance.StartServerAsync(cancellationToken);
             using (timings.Stage("Embed HTTP round trip (includes backend work)"))
                 timings.Backend = await FastApiService.Instance.EmbedProjectAsync(chunks, projectPath, indexId, cancellationToken);
+            // Structural queries use one shared workspace after vector ingestion finishes.
             using (timings.Stage("Load Roslyn workspace"))
                 newContext = await IndexedProjectContext.OpenAsync(solutionPath, cancellationToken);
             var identity = new SymbolIdentityService();
@@ -87,7 +92,10 @@ public sealed class ProjectIndexer : IDisposable
             newContext?.Dispose();
             throw;
         }
-        finally { timings.Finish(); }
+        finally
+        {
+            timings.Finish();
+        }
     }
 
     public void Dispose()

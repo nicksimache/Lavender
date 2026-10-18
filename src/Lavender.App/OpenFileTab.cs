@@ -5,6 +5,7 @@ using ICSharpCode.AvalonEdit.Document;
 
 namespace Lavender.App;
 
+/// <summary>Owns a tab's editable document, last saved text, and caret/scroll position.</summary>
 public sealed class OpenFileTab : INotifyPropertyChanged
 {
     public string FullPath { get; }
@@ -30,16 +31,25 @@ public sealed class OpenFileTab : INotifyPropertyChanged
         Document.TextChanged += (_, _) => Notify();
     }
 
-    public void MarkSaved() { _savedText = Document.Text; Notify(); }
+    public void MarkSaved()
+    {
+        _savedText = Document.Text;
+        Notify();
+    }
+
     public void ReloadIfClean()
     {
-        if (IsDirty || !File.Exists(FullPath)) return;
+        // Agent edits can refresh saved tabs, but must never overwrite unsaved editor changes.
+        if (IsDirty || !File.Exists(FullPath))
+            return;
         string text = File.ReadAllText(FullPath);
-        if (text == _savedText) return;
+        if (text == _savedText)
+            return;
         _savedText = text;
         Document.Text = text;
         Notify();
     }
+
     private void Notify()
     {
         foreach (string name in new[] { nameof(IsDirty), nameof(IsSaved), nameof(Header) })

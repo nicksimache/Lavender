@@ -4,11 +4,13 @@ using Lavender.Infrastructure.FileSystem;
 
 namespace Lavender.McpServer;
 
+/// <summary>Owns the selected project, its index state, and the gate shared by indexing and edits.</summary>
 public sealed class LavenderMcpState : IDisposable
 {
     private const int PollInterval = 100;
 
     private readonly ProjectIndexer _projectIndexer = new();
+    // Edits must not race indexing or each other; callers fail quickly instead of queuing stale operations.
     private readonly SemaphoreSlim _indexGate = new(1, 1);
     public string IndexId { get; private set; } = "";
     public bool IsIndexing { get; private set; }
@@ -42,13 +44,24 @@ public sealed class LavenderMcpState : IDisposable
             RequiresReindex = false;
             await _projectIndexer.IndexProjectAsync(projectPath, solutionPath, IndexId, cancellationToken);
         }
-        catch (Exception ex) { IndexingError = ex.Message; throw; }
-        finally { IsIndexing = false; _indexGate.Release(); }
+        catch (Exception ex)
+        {
+            IndexingError = ex.Message;
+            throw;
+        }
+        finally
+        {
+            IsIndexing = false;
+            _indexGate.Release();
+        }
     }
 
     public bool IsProjectIndexed => KnowledgeService is not null;
 
-    public async Task<string> CreateFileAsync(string path, string content, CancellationToken cancellationToken = default)
+    public async Task<string> CreateFileAsync(
+        string path,
+        string content,
+        CancellationToken cancellationToken = default)
     {
         if (!await _indexGate.WaitAsync(0, cancellationToken))
             throw new InvalidOperationException("Indexing or another edit is running. Retry after it finishes.");
@@ -59,7 +72,10 @@ public sealed class LavenderMcpState : IDisposable
             RequiresReindex = true;
             return created;
         }
-        finally { _indexGate.Release(); }
+        finally
+        {
+            _indexGate.Release();
+        }
     }
 
     public IProjectKnowledgeService RequireKnowledgeService()
@@ -78,10 +94,14 @@ public sealed class LavenderMcpState : IDisposable
         {
             string root = ProjectPath ?? throw new InvalidOperationException("Open a project first.");
             var result = await operation(new ProjectFileEditor(root));
-            if (result.Changed) RequiresReindex = true;
+            if (result.Changed)
+                RequiresReindex = true;
             return result;
         }
-        finally { _indexGate.Release(); }
+        finally
+        {
+            _indexGate.Release();
+        }
     }
 
     public async Task WaitForProjectIndexed(CancellationToken cancellationToken = default)
@@ -90,7 +110,8 @@ public sealed class LavenderMcpState : IDisposable
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
         while (!IsProjectIndexed)
         {
-            if (!IsIndexing) throw new InvalidOperationException(NotReadyMessage);
+            if (!IsIndexing)
+                throw new InvalidOperationException(NotReadyMessage);
             await Task.Delay(PollInterval, timeout.Token);
         }
     }

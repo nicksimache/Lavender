@@ -8,6 +8,7 @@ namespace Lavender.Infrastructure.Indexing.Symbol;
 /// </summary>
 public sealed class SymbolIndex
 {
+    // Both maps share canonical IDs: serializable metadata for tools, Roslyn symbols for source lookup.
     private readonly Dictionary<string, ISymbol> _roslynSymbols = new(StringComparer.Ordinal);
     private readonly Dictionary<string, CodeSymbol> _symbols = new(StringComparer.Ordinal);
 
@@ -21,7 +22,9 @@ public sealed class SymbolIndex
     }
 
     public IReadOnlyList<CodeSymbol> Symbols => _symbols.Values.ToArray();
+
     public CodeSymbol? Get(string id) => _symbols.GetValueOrDefault(id);
+
     public ISymbol? GetRoslynSymbol(string id) => _roslynSymbols.GetValueOrDefault(id);
 
     public IReadOnlyList<CodeSymbol> Find(string query) => _symbols.Values

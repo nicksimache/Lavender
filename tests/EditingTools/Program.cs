@@ -6,7 +6,11 @@ Directory.CreateDirectory(root);
 using var state = new LavenderMcpState();
 // Seed project selection only: this fixture must never start indexing or call an API.
 typeof(LavenderMcpState).GetProperty(nameof(state.ProjectPath))!.SetValue(state, root);
-void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
+void Check(bool condition, string message)
+{
+    if (!condition)
+        throw new Exception(message);
+}
 try
 {
     var created = await new CreateFileTool(state).ExecuteAsync("Scratch/Test.cs", "class Test {}\n");
@@ -31,5 +35,6 @@ try
 finally
 {
     if (Path.GetDirectoryName(Path.GetFullPath(root)) == Path.GetTempPath().TrimEnd(Path.DirectorySeparatorChar)
-        && Path.GetFileName(root).StartsWith("LavenderEditingTools-")) Directory.Delete(root, true);
+        && Path.GetFileName(root).StartsWith("LavenderEditingTools-"))
+        Directory.Delete(root, true);
 }

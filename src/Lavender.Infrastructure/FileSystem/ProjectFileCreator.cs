@@ -12,7 +12,8 @@ public static class ProjectFileCreator
         ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(content);
-        if (Path.IsPathRooted(path)) throw new ArgumentException("Use a path relative to the project root.");
+        if (Path.IsPathRooted(path))
+            throw new ArgumentException("Use a path relative to the project root.");
         string[] parts = path.Replace('\\', '/').Split('/');
         foreach (string part in parts)
         {
@@ -26,7 +27,8 @@ public static class ProjectFileCreator
                 throw new ArgumentException("Windows device names cannot be used as file names.");
         }
         string root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(projectRoot));
-        if (!Directory.Exists(root)) throw new DirectoryNotFoundException("The selected project folder does not exist.");
+        if (!Directory.Exists(root))
+            throw new DirectoryNotFoundException("The selected project folder does not exist.");
         string destination = Path.GetFullPath(Path.Combine(root, Path.Combine(parts)));
         string relative = Path.GetRelativePath(root, destination);
         if (Path.IsPathRooted(relative) || relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar))
@@ -43,7 +45,8 @@ public static class ProjectFileCreator
         }
         CheckDirectories();
         RejectLink(destination);
-        if (File.Exists(destination) || Directory.Exists(destination)) throw new IOException("The destination already exists.");
+        if (File.Exists(destination) || Directory.Exists(destination))
+            throw new IOException("The destination already exists.");
         string parent = Path.GetDirectoryName(destination)!;
         string? temporary = null;
         try
@@ -69,7 +72,11 @@ public static class ProjectFileCreator
         {
             if (temporary is not null)
             {
-                try { CheckDirectories(); File.Delete(temporary); }
+                try
+                {
+                    CheckDirectories();
+                    File.Delete(temporary);
+                }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
             }
         }

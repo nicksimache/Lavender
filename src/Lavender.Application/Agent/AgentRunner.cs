@@ -6,6 +6,7 @@ using System.Text.Json;
 
 namespace Lavender.Application.Agent;
 
+/// <summary>Runs one user turn through model requests, ordered tool execution, and persisted history.</summary>
 public sealed class AgentRunner
 {
     private const string SystemPrompt = """
@@ -100,6 +101,7 @@ public sealed class AgentRunner
             CreatedAt = DateTimeOffset.UtcNow
         };
         turn.ProjectRevision = ProjectSnapshot.Compute(conversation.ProjectPath);
+        // Persist before contacting the model so an interrupted run remains visible in history.
         conversation.Turns.Add(turn);
         await SaveAsync(conversation, cancellationToken);
 
@@ -120,6 +122,7 @@ public sealed class AgentRunner
                     await _model.CompleteAsync(messages, options, cancellationToken);
                 messages.Add(new AssistantChatMessage(completion));
 
+                // After tools have run, a separate final request summarizes their verified outcomes.
                 if (completion.FinishReason != ChatFinishReason.ToolCalls ||
                     completion.ToolCalls.Count == 0)
                 {
@@ -139,9 +142,14 @@ public sealed class AgentRunner
                     {
                         skipped.ToolCalls.Add(new ToolExecutionRecord
                         {
-                            CallId = call.Id, ToolName = call.FunctionName, ArgumentsJson = call.FunctionArguments.ToString(),
-                            StartedAt = DateTimeOffset.UtcNow, CompletedAt = DateTimeOffset.UtcNow,
-                            Outcome = "not_executed", OutcomeMessage = "Tool-call limit reached.", Error = "Tool-call limit reached."
+                            CallId = call.Id,
+                            ToolName = call.FunctionName,
+                            ArgumentsJson = call.FunctionArguments.ToString(),
+                            StartedAt = DateTimeOffset.UtcNow,
+                            CompletedAt = DateTimeOffset.UtcNow,
+                            Outcome = "not_executed",
+                            OutcomeMessage = "Tool-call limit reached.",
+                            Error = "Tool-call limit reached."
                         });
                         messages.Add(new ToolChatMessage(call.Id, "Not executed: tool-call limit reached."));
                     }
@@ -199,6 +207,7 @@ public sealed class AgentRunner
 
         ConversationTurn[] recent = conversation.Turns.TakeLast(_settings.MaxConversationTurns).ToArray();
         var evidenceByTurn = new Dictionary<Guid, string>();
+        // Spend the evidence budget on newer turns first, then replay them in conversation order.
         int remainingEvidence = 24_000;
         string? currentRevision = conversation.Turns.LastOrDefault()?.ProjectRevision;
         foreach (ConversationTurn turn in recent.Reverse())
@@ -261,84 +270,84 @@ public sealed class AgentRunner
         HashSet<string> executedCalls,
         CancellationToken cancellationToken)
     {
-        // Execute in the model's requested order. Future write tools must not race reads or other writes.
+        // Execute in the model's requested order: a read may depend on the preceding edit.
         ConcurrentDictionary<int, ToolChatMessage> results = new();
 
         foreach (var (call, index) in calls.Select((call, index) => (call, index)))
         {
-                cancellationToken.ThrowIfCancellationRequested();
-                string arguments = call.FunctionArguments.ToString();
-                Progress?.Invoke($"Using {call.FunctionName}…");
-                string signature = $"{call.FunctionName}\n{arguments}";
-                ToolExecutionRecord record = new()
-                {
-                    CallId = call.Id,
-                    ToolName = call.FunctionName,
-                    ArgumentsJson = arguments,
-                    StartedAt = DateTimeOffset.UtcNow
-                };
-                lock (step.ToolCalls)
-                {
-                    step.ToolCalls.Add(record);
-                }
+            cancellationToken.ThrowIfCancellationRequested();
+            string arguments = call.FunctionArguments.ToString();
+            Progress?.Invoke($"Using {call.FunctionName}…");
+            string signature = $"{call.FunctionName}\n{arguments}";
+            ToolExecutionRecord record = new()
+            {
+                CallId = call.Id,
+                ToolName = call.FunctionName,
+                ArgumentsJson = arguments,
+                StartedAt = DateTimeOffset.UtcNow
+            };
+            lock (step.ToolCalls)
+            {
+                step.ToolCalls.Add(record);
+            }
 
-                lock (executedCalls)
+            lock (executedCalls)
+            {
+                if (_settings.StopOnRepeatedToolCall &&
+                    executedCalls.Contains(signature))
                 {
-                    if (_settings.StopOnRepeatedToolCall &&
-                        executedCalls.Contains(signature))
-                    {
-                        record.WasBlockedAsRepeat = true;
-                    }
-                    // Block immediate repetition, but permit re-reading after another tool (including a future edit).
-                    executedCalls.Clear();
-                    executedCalls.Add(signature);
+                    record.WasBlockedAsRepeat = true;
                 }
+                // Only the previous signature is retained, so reads are allowed again after an edit.
+                executedCalls.Clear();
+                executedCalls.Add(signature);
+            }
 
-                if (record.WasBlockedAsRepeat)
-                {
-                    record.Error = "Identical repeated tool call blocked.";
-                    record.Outcome = "blocked";
-                    record.OutcomeMessage = record.Error;
-                    record.CompletedAt = DateTimeOffset.UtcNow;
-                    results[index] = new ToolChatMessage(call.Id, record.Error);
-                    ToolCompleted?.Invoke(record);
-                    continue;
-                }
+            if (record.WasBlockedAsRepeat)
+            {
+                record.Error = "Identical repeated tool call blocked.";
+                record.Outcome = "blocked";
+                record.OutcomeMessage = record.Error;
+                record.CompletedAt = DateTimeOffset.UtcNow;
+                results[index] = new ToolChatMessage(call.Id, record.Error);
+                ToolCompleted?.Invoke(record);
+                continue;
+            }
 
-                using CancellationTokenSource timeout =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(TimeSpan.FromSeconds(_settings.ToolTimeoutSeconds));
+            using CancellationTokenSource timeout =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(_settings.ToolTimeoutSeconds));
 
-                try
+            try
+            {
+                string output = await _tools.CallToolAsync(
+                    call.FunctionName, arguments, timeout.Token);
+                ToolUseSummary.RecordOutcome(record, output);
+                record.ResultJson = Truncate(output);
+                results[index] = new ToolChatMessage(call.Id, record.ResultJson);
+            }
+            catch (Exception ex) when (
+                ex is not OperationCanceledException ||
+                !cancellationToken.IsCancellationRequested)
+            {
+                record.Error = ex is OperationCanceledException
+                    ? $"Tool timed out after {_settings.ToolTimeoutSeconds} seconds."
+                    : ex.Message;
+                record.Outcome = ex is OperationCanceledException ? "timed_out" : "failed";
+                record.OutcomeMessage = record.Error + " No successful action was confirmed.";
+                results[index] = new ToolChatMessage(
+                    call.Id, $"Tool error: {record.Error}");
+            }
+            finally
+            {
+                if (cancellationToken.IsCancellationRequested && record.Outcome is null)
                 {
-                    string output = await _tools.CallToolAsync(
-                        call.FunctionName, arguments, timeout.Token);
-                    ToolUseSummary.RecordOutcome(record, output);
-                    record.ResultJson = Truncate(output);
-                    results[index] = new ToolChatMessage(call.Id, record.ResultJson);
+                    record.Outcome = "cancelled";
+                    record.OutcomeMessage = "Cancelled; completion was not confirmed.";
                 }
-                catch (Exception ex) when (
-                    ex is not OperationCanceledException ||
-                    !cancellationToken.IsCancellationRequested)
-                {
-                    record.Error = ex is OperationCanceledException
-                        ? $"Tool timed out after {_settings.ToolTimeoutSeconds} seconds."
-                        : ex.Message;
-                    record.Outcome = ex is OperationCanceledException ? "timed_out" : "failed";
-                    record.OutcomeMessage = record.Error + " No successful action was confirmed.";
-                    results[index] = new ToolChatMessage(
-                        call.Id, $"Tool error: {record.Error}");
-                }
-                finally
-                {
-                    if (cancellationToken.IsCancellationRequested && record.Outcome is null)
-                    {
-                        record.Outcome = "cancelled";
-                        record.OutcomeMessage = "Cancelled; completion was not confirmed.";
-                    }
-                    record.CompletedAt = DateTimeOffset.UtcNow;
-                    ToolCompleted?.Invoke(record);
-                }
+                record.CompletedAt = DateTimeOffset.UtcNow;
+                ToolCompleted?.Invoke(record);
+            }
         }
         return Enumerable.Range(0, calls.Count).Select(i => results[i]).ToArray();
     }

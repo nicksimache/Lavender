@@ -25,7 +25,9 @@ BATCH_SIZE = 35
 CLUSTER_COUNT = 25
 CACHE_PATH = Path("./lavender_vectors/embedding-cache.sqlite3")
 REPORT_DIRECTORY = Path(__file__).resolve().parent / "artifacts" / "indexing"
+# The condition protects published search snapshots and wakes searches as batches arrive.
 changed = threading.Condition()
+# Only one embedding run may replace tables at a time; searches can use partial snapshots.
 index_lock = threading.Lock()
 sessions = {}
 
@@ -67,6 +69,7 @@ def table_name(project_path):
 
 
 def cache_key(text):
+    # Changing the embedding model must not reuse vectors produced by the old model.
     return hashlib.sha256((EMBED_MODEL + "\0" + text).encode()).hexdigest()
 
 
@@ -89,25 +92,42 @@ def build_groups(rows):
     assignments = np.argmax(normalized @ normalized[:k].T, axis=1)
     # A seed owns itself when identical seeds tie, keeping all K groups nonempty.
     assignments[:k] = np.arange(k)
-    return [dict(id=i, centroid=vectors[assignments == i].mean(axis=0),
-                 rows=[ordered[j] for j in np.flatnonzero(assignments == i)])
-            for i in range(k)]
+    return [
+        dict(
+            id=i,
+            centroid=vectors[assignments == i].mean(axis=0),
+            rows=[ordered[j] for j in np.flatnonzero(assignments == i)],
+        )
+        for i in range(k)
+    ]
 
 
 def search_groups(groups, query_vector, count):
     if not groups:
         return [], []
     query = unit_vectors(query_vector)
+    # Unit-length vectors turn a dot product into cosine similarity; distance is 1 - similarity.
     distances = np.clip(1 - unit_vectors([g["centroid"] for g in groups]) @ query, 0, 2)
     selected = np.argsort(distances, kind="stable")[:count]
     results, summaries = [], []
     for index in selected:
         group = groups[index]
         distance = float(distances[index])
-        summaries.append(dict(group_id=group["id"], distance=distance, chunk_count=len(group["rows"])))
-        chunk_distances = np.clip(1 - unit_vectors([r["vector"] for r in group["rows"]]) @ query, 0, 2)
+        summaries.append(
+            dict(group_id=group["id"], distance=distance, chunk_count=len(group["rows"]))
+        )
+        chunk_distances = np.clip(
+            1 - unit_vectors([r["vector"] for r in group["rows"]]) @ query, 0, 2
+        )
         for row, chunk_distance in zip(group["rows"], chunk_distances):
-            results.append(dict(row, _distance=float(chunk_distance), group_id=group["id"], group_distance=distance))
+            results.append(
+                dict(
+                    row,
+                    _distance=float(chunk_distance),
+                    group_id=group["id"],
+                    group_distance=distance,
+                )
+            )
     # Rank within the selected groups, without dropping any members.
     results.sort(key=lambda row: (row["group_distance"], row["_distance"]))
     return results, summaries
@@ -126,10 +146,25 @@ def embedding_failure_context(error, batch, pending):
     """Map the API's batch-local input index back to source, without logging code."""
     inputs = []
     for index, key in enumerate(batch):
-        inputs.append({"input_index": index, "chunks": [
-            {field: row.get(field) for field in
-             ("id", "file_path", "start_line", "end_line", "chunk_type", "member_name")}
-            for row in pending[key]]})
+        inputs.append(
+            {
+                "input_index": index,
+                "chunks": [
+                    {
+                        field: row.get(field)
+                        for field in (
+                            "id",
+                            "file_path",
+                            "start_line",
+                            "end_line",
+                            "chunk_type",
+                            "member_name",
+                        )
+                    }
+                    for row in pending[key]
+                ],
+            }
+        )
     match = re.search(r"input\[(\d+)\]", str(error))
     index = int(match.group(1)) if match else None
     return {
@@ -139,11 +174,9 @@ def embedding_failure_context(error, batch, pending):
 
 
 def get_embedding(text: str) -> list[float]:
-    response = client.embeddings.create(
-        model=EMBED_MODEL,
-        input=text
-    )
+    response = client.embeddings.create(model=EMBED_MODEL, input=text)
     return response.data[0].embedding
+
 
 @app.get("/")
 def root():
@@ -153,35 +186,59 @@ def root():
         "source_revision": SOURCE_REVISION,
     }
 
+
 @app.post("/embed-project")
 def embed_project(request: EmbedProjectRequest):
     if not index_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="An indexing run is already active")
     started = time.perf_counter()
-    timings = {"embedding_api_ms": 0.0, "table_write_ms": 0.0,
-               "embedding_requests": 0, "chunk_count": len(request.chunks),
-               "cache_hits": 0, "embedded_chunks": 0, "batch_size": BATCH_SIZE,
-               "clustering_ms": 0.0, "cluster_count": 0}
+    timings = {
+        "embedding_api_ms": 0.0,
+        "table_write_ms": 0.0,
+        "embedding_requests": 0,
+        "chunk_count": len(request.chunks),
+        "cache_hits": 0,
+        "embedded_chunks": 0,
+        "batch_size": BATCH_SIZE,
+        "clustering_ms": 0.0,
+        "cluster_count": 0,
+    }
     rows = []
     name = table_name(request.project_path)
-    state = {"status": "indexing", "indexed_chunks": 0, "total_chunks": len(request.chunks), "error": None, "groups": []}
+    state = {
+        "status": "indexing",
+        "indexed_chunks": 0,
+        "total_chunks": len(request.chunks),
+        "error": None,
+        "groups": [],
+    }
     connection = None
     with changed:
         for previous in sessions.values():
             if previous.get("table") == name:
-                previous.update(status="superseded", indexed_chunks=0, groups=[], error="A newer indexing run replaced this snapshot")
+                previous.update(
+                    status="superseded",
+                    indexed_chunks=0,
+                    groups=[],
+                    error="A newer indexing run replaced this snapshot",
+                )
         state["table"] = name
         sessions[request.index_id] = state
         changed.notify_all()
     try:
         CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
         connection = sqlite3.connect(CACHE_PATH)
-        connection.execute("CREATE TABLE IF NOT EXISTS embeddings (key TEXT PRIMARY KEY, vector TEXT NOT NULL)")
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS embeddings (key TEXT PRIMARY KEY, vector TEXT NOT NULL)"
+        )
+        # Several chunks may share embedding text: request one vector, then attach it to each row.
         pending = {}
         for position, chunk in enumerate(request.chunks):
             chunk_row = dict(chunk.model_dump(), chunk_order=position)
             key = cache_key(chunk.embedding_text)
-            cached = connection.execute("SELECT vector FROM embeddings WHERE key = ?", (key,)).fetchone()
+            cached = connection.execute(
+                "SELECT vector FROM embeddings WHERE key = ?", (key,)
+            ).fetchone()
             if cached:
                 rows.append(dict(chunk_row, vector=json.loads(cached[0])))
                 timings["cache_hits"] += 1
@@ -202,10 +259,12 @@ def embed_project(request: EmbedProjectRequest):
             timings["clustering_ms"] += (time.perf_counter() - cluster_started) * 1000
             timings["cluster_count"] = len(state["groups"])
             changed.notify_all()
-        timings["table_write_ms"] += (time.perf_counter() - write_started) * 1000 - (timings["clustering_ms"] - clustering_before)
+        timings["table_write_ms"] += (time.perf_counter() - write_started) * 1000 - (
+            timings["clustering_ms"] - clustering_before
+        )
         keys = list(pending)
         for offset in range(0, len(keys), BATCH_SIZE):
-            batch = keys[offset:offset + BATCH_SIZE]
+            batch = keys[offset : offset + BATCH_SIZE]
             api_started = time.perf_counter()
             timings["embedding_requests"] += 1
             try:
@@ -217,7 +276,9 @@ def embed_project(request: EmbedProjectRequest):
                 timings["embedding_api_ms"] += (time.perf_counter() - api_started) * 1000
             batch_rows = []
             for key, vector in zip(batch, vectors):
-                connection.execute("INSERT OR REPLACE INTO embeddings VALUES (?, ?)", (key, json.dumps(vector)))
+                connection.execute(
+                    "INSERT OR REPLACE INTO embeddings VALUES (?, ?)", (key, json.dumps(vector))
+                )
                 batch_rows.extend(dict(chunk, vector=vector) for chunk in pending[key])
             connection.commit()
             timings["embedded_chunks"] += len(batch_rows)
@@ -235,7 +296,9 @@ def embed_project(request: EmbedProjectRequest):
                 timings["clustering_ms"] += (time.perf_counter() - cluster_started) * 1000
                 timings["cluster_count"] = len(state["groups"])
                 changed.notify_all()
-            timings["table_write_ms"] += (time.perf_counter() - write_started) * 1000 - (timings["clustering_ms"] - clustering_before)
+            timings["table_write_ms"] += (time.perf_counter() - write_started) * 1000 - (
+                timings["clustering_ms"] - clustering_before
+            )
         with changed:
             state["status"] = "completed"
             changed.notify_all()
@@ -255,7 +318,13 @@ def embed_project(request: EmbedProjectRequest):
             connection.close()
         index_lock.release()
         timings["total_ms"] = (time.perf_counter() - started) * 1000
-        timings["other_ms"] = max(0, timings["total_ms"] - timings["embedding_api_ms"] - timings["table_write_ms"] - timings["clustering_ms"])
+        timings["other_ms"] = max(
+            0,
+            timings["total_ms"]
+            - timings["embedding_api_ms"]
+            - timings["table_write_ms"]
+            - timings["clustering_ms"],
+        )
         # Keep timing data even if the desktop times out waiting for this request.
         report_dir = REPORT_DIRECTORY
         try:
@@ -292,15 +361,38 @@ def search(request: SearchRequest):
                 selected_groups = []
                 if state and state.get("table") != name:
                     raise ValueError("Index run does not belong to the requested project")
-                if (state is None and request.index_id == "legacy") or (state and state["indexed_chunks"]):
-                    groups = state["groups"] if state else build_groups(db.open_table(name).to_arrow().to_pylist())
-                    raw_results, selected_groups = search_groups(groups, query_vector, request.group_count)
-                complete = state is None and request.index_id == "legacy" or state and state["status"] != "indexing"
-                close_enough = bool(selected_groups) and selected_groups[0]["distance"] <= request.max_distance
+                if (state is None and request.index_id == "legacy") or (
+                    state and state["indexed_chunks"]
+                ):
+                    groups = (
+                        state["groups"]
+                        if state
+                        else build_groups(db.open_table(name).to_arrow().to_pylist())
+                    )
+                    raw_results, selected_groups = search_groups(
+                        groups, query_vector, request.group_count
+                    )
+                complete = (
+                    state is None
+                    and request.index_id == "legacy"
+                    or state
+                    and state["status"] != "indexing"
+                )
+                # The threshold controls early return during indexing, not a final result filter.
+                close_enough = (
+                    bool(selected_groups) and selected_groups[0]["distance"] <= request.max_distance
+                )
                 if complete or close_enough or time.monotonic() >= deadline:
                     break
                 changed.wait(timeout=max(0, deadline - time.monotonic()))
-            snapshot = dict(state) if state else {"status": "completed" if request.index_id == "legacy" else "pending", "indexed_chunks": len(raw_results)}
+            snapshot = (
+                dict(state)
+                if state
+                else {
+                    "status": "completed" if request.index_id == "legacy" else "pending",
+                    "indexed_chunks": len(raw_results),
+                }
+            )
 
         # This backend runs with redirected output under the desktop app.
         # Writing debug results to a closed pipe must not break a valid search.
@@ -308,19 +400,22 @@ def search(request: SearchRequest):
         results = []
 
         for row in raw_results:
-            results.append({
-                "file_path": row["file_path"],
-                "chunk_type": row["chunk_type"],
-                "namespace": row["namespace"],
-                "class_name": row["class_name"],
-                "member_name": row["member_name"],
-                "signature": row["signature"],
-                "start_line": row["start_line"],
-                "end_line": row["end_line"],
-                "code": row["code"],
-                "distance": row["_distance"],
-                "group_id": row["group_id"], "group_distance": row["group_distance"]
-            })
+            results.append(
+                {
+                    "file_path": row["file_path"],
+                    "chunk_type": row["chunk_type"],
+                    "namespace": row["namespace"],
+                    "class_name": row["class_name"],
+                    "member_name": row["member_name"],
+                    "signature": row["signature"],
+                    "start_line": row["start_line"],
+                    "end_line": row["end_line"],
+                    "code": row["code"],
+                    "distance": row["_distance"],
+                    "group_id": row["group_id"],
+                    "group_distance": row["group_distance"],
+                }
+            )
 
         return {
             "results": results,

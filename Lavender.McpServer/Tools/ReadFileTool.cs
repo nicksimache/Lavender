@@ -4,6 +4,8 @@ using System.ComponentModel;
 namespace Lavender.McpServer.Tools;
 
 [McpServerToolType]
+// This compatibility reader accepts a caller-provided root and returns text only.
+// The editing reader uses LavenderMcpState and also returns the hash required for writes.
 public static class ReadFileTool
 {
     [McpServerTool(Name = "lavender_ping")]

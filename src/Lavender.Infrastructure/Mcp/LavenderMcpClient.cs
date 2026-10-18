@@ -10,6 +10,7 @@ public sealed record McpToolDefinition(
     string Description,
     BinaryData JsonSchema);
 
+/// <summary>Starts the local C# tool server and translates agent calls into MCP stdio requests.</summary>
 public sealed class LavenderMcpClient : IAsyncDisposable
 {
     private readonly string _workingDirectory;
@@ -54,10 +55,14 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         {
             Task<string> stdout = build.StandardOutput.ReadToEndAsync();
             Task<string> stderr = build.StandardError.ReadToEndAsync();
-            try { await build.WaitForExitAsync(cancellationToken).ConfigureAwait(false); }
+            try
+            {
+                await build.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            }
             catch (OperationCanceledException)
             {
-                if (!build.HasExited) build.Kill(entireProcessTree: true);
+                if (!build.HasExited)
+                    build.Kill(entireProcessTree: true);
                 throw;
             }
             string diagnostics = (await stdout.ConfigureAwait(false)) + (await stderr.ConfigureAwait(false));
@@ -131,7 +136,11 @@ public sealed class LavenderMcpClient : IAsyncDisposable
     {
         string resultJson = await InvokeToolAsync(
             "lavender_index_project",
-            JsonSerializer.Serialize(new { projectPath, solutionPath }),
+            JsonSerializer.Serialize(new
+            {
+                projectPath,
+                solutionPath
+            }),
             cancellationToken);
 
         using JsonDocument result = JsonDocument.Parse(resultJson);

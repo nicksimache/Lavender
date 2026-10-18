@@ -7,7 +7,8 @@ Directory.CreateDirectory(temp);
 int passed = 0;
 void Check(bool condition, string name)
 {
-    if (!condition) throw new Exception("FAIL: " + name);
+    if (!condition)
+        throw new Exception("FAIL: " + name);
     Console.WriteLine("PASS: " + name);
     passed++;
 }
@@ -20,7 +21,9 @@ try
         var timings = new Lavender.Infrastructure.Indexing.IndexingTimings(temp);
         using (var initial = System.Text.Json.JsonDocument.Parse(File.ReadAllText(timings.ReportPath)))
             Check(initial.RootElement.GetProperty("Status").GetString() == "Running", "timing report exists before first stage completes");
-        using (timings.Stage("scan")) { }
+        using (timings.Stage("scan"))
+        {
+        }
         timings.Error = "Test failure";
         timings.Finish();
         using var finished = System.Text.Json.JsonDocument.Parse(File.ReadAllText(timings.ReportPath));
@@ -28,7 +31,10 @@ try
             && finished.RootElement.GetProperty("StageMilliseconds").TryGetProperty("scan", out _),
             "failed timing report retains completed stages in selected directory");
     }
-    finally { Environment.SetEnvironmentVariable("LAVENDER_INDEX_REPORT_DIRECTORY", previousReportDirectory); }
+    finally
+    {
+        Environment.SetEnvironmentVariable("LAVENDER_INDEX_REPORT_DIRECTORY", previousReportDirectory);
+    }
     string history = Path.Combine(temp, "history");
     var store = new JsonConversationStore(history);
     var a = await store.CreateAsync();
@@ -36,8 +42,14 @@ try
     a.ContextFiles.Add(Path.Combine(a.ProjectPath, "Code.cs"));
     a.Summary = "The user chose a local search index.";
     a.SummarizedTurnCount = 1;
-    a.Turns.Add(new ConversationTurn { Id = Guid.NewGuid(), CreatedAt = DateTimeOffset.UtcNow,
-        UserMessage = "Find the indexer", AssistantMessage = "It is in Indexer.cs", Status = AgentRunStatus.Completed });
+    a.Turns.Add(new ConversationTurn
+    {
+        Id = Guid.NewGuid(),
+        CreatedAt = DateTimeOffset.UtcNow,
+        UserMessage = "Find the indexer",
+        AssistantMessage = "It is in Indexer.cs",
+        Status = AgentRunStatus.Completed
+    });
     await store.SaveAsync(a);
     var b = await store.CreateAsync();
     b.ProjectPath = Path.Combine(temp, "ProjectB");
@@ -98,7 +110,9 @@ try
     Check(await lastProject.LoadAsync() is null, "missing previous project does not block startup");
     ToolExecutionRecord MakeRecord(string name) => new()
     {
-        CallId = Guid.NewGuid().ToString(), ToolName = name, ArgumentsJson = "{\"relativePath\":\"File.cs\",\"startLine\":2,\"endLine\":4}",
+        CallId = Guid.NewGuid().ToString(),
+        ToolName = name,
+        ArgumentsJson = "{\"relativePath\":\"File.cs\",\"startLine\":2,\"endLine\":4}",
         StartedAt = DateTimeOffset.UtcNow
     };
     var inspected = MakeRecord("git_diff");
@@ -136,8 +150,15 @@ try
         "create file makes parent directories and preserves Unicode and newlines");
     async Task<bool> Refuses(string path)
     {
-        try { await ProjectFileCreator.CreateAsync(createRoot, path, "overwrite"); return false; }
-        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException) { return true; }
+        try
+        {
+            await ProjectFileCreator.CreateAsync(createRoot, path, "overwrite");
+            return false;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
     }
     Check(await Refuses("src/Example.cs") && (await File.ReadAllTextAsync(Path.Combine(createRoot, createdPath))).Contains("café"),
         "create never overwrites existing contents");
@@ -150,20 +171,39 @@ try
     {
         cancelled.Cancel();
         bool stopped = false;
-        try { await ProjectFileCreator.CreateAsync(createRoot, "cancelled.txt", "x", cancelled.Token); }
-        catch (OperationCanceledException) { stopped = true; }
+        try
+        {
+            await ProjectFileCreator.CreateAsync(createRoot, "cancelled.txt", "x", cancelled.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            stopped = true;
+        }
         Check(stopped && !File.Exists(Path.Combine(createRoot, "cancelled.txt")), "cancelled creation leaves no destination file");
     }
     bool encodingFailed = false;
-    try { await ProjectFileCreator.CreateAsync(createRoot, "bad.txt", "\uD800"); }
-    catch (System.Text.EncoderFallbackException) { encodingFailed = true; }
+    try
+    {
+        await ProjectFileCreator.CreateAsync(createRoot, "bad.txt", "\uD800");
+    }
+    catch (System.Text.EncoderFallbackException)
+    {
+        encodingFailed = true;
+    }
     Check(encodingFailed && !File.Exists(Path.Combine(createRoot, "bad.txt"))
         && Directory.GetFiles(createRoot, ".lavender-create-*.tmp", SearchOption.AllDirectories).Length == 0,
         "failed writes leave no partial destination or temporary file");
     async Task<bool> RaceCreate(string content)
     {
-        try { await ProjectFileCreator.CreateAsync(createRoot, "race.txt", content); return true; }
-        catch (IOException) { return false; }
+        try
+        {
+            await ProjectFileCreator.CreateAsync(createRoot, "race.txt", content);
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
     bool[] race = await Task.WhenAll(RaceCreate("first"), RaceCreate("second"));
     Check(race.Count(x => x) == 1 && new[] { "first", "second" }.Contains(await File.ReadAllTextAsync(Path.Combine(createRoot, "race.txt"))),
@@ -183,8 +223,14 @@ try
     Check(await File.ReadAllTextAsync(Path.Combine(createRoot, "edit.cs")) == "one\r\ntwo updated\r\nextra\r\nthree\r\n"
         && await File.ReadAllTextAsync(written.BackupPath!) == readEdit.Content, "line replacement preserves CRLF and saves original bytes");
     bool staleRejected = false;
-    try { await editor.DeleteAsync("edit.cs", readEdit.ContentHash); }
-    catch (InvalidOperationException) { staleRejected = true; }
+    try
+    {
+        await editor.DeleteAsync("edit.cs", readEdit.ContentHash);
+    }
+    catch (InvalidOperationException)
+    {
+        staleRejected = true;
+    }
     Check(staleRejected && File.Exists(Path.Combine(createRoot, "edit.cs")), "stale hash prevents deletion after an edit");
     var inserted = await editor.WriteLinesAsync("edit.cs", 1, 0, "header", written.ContentHash!);
     var afterInsert = await editor.ReadAsync("edit.cs");
@@ -194,8 +240,14 @@ try
     var noChange = await editor.WriteLinesAsync("edit.cs", 2, 2, "extra", removed.ContentHash!);
     Check(!noChange.Changed && noChange.BackupPath is null, "identical line edit reports no change");
     bool invalidRange = false;
-    try { await editor.WriteLinesAsync("edit.cs", 5, 7, "bad", removed.ContentHash!); }
-    catch (ArgumentException) { invalidRange = true; }
+    try
+    {
+        await editor.WriteLinesAsync("edit.cs", 5, 7, "bad", removed.ContentHash!);
+    }
+    catch (ArgumentException)
+    {
+        invalidRange = true;
+    }
     Check(invalidRange && (await editor.ReadAsync("edit.cs")).ContentHash == removed.ContentHash, "invalid line ranges leave the file unchanged");
     await ProjectFileCreator.CreateAsync(createRoot, "append.txt", "first");
     var appendRead = await editor.ReadAsync("append.txt");
@@ -219,17 +271,32 @@ try
     Check(!File.Exists(Path.Combine(createRoot, "edit.cs")) && File.Exists(Path.Combine(createRoot, "nested", "Renamed.cs"))
         && File.Exists(movedEdit.BackupPath!), "move creates destination folders and retains a backup");
     bool collision = false;
-    try { await editor.MoveAsync("nested/Renamed.cs", "empty.txt", movedEdit.ContentHash!); }
-    catch (IOException) { collision = true; }
+    try
+    {
+        await editor.MoveAsync("nested/Renamed.cs", "empty.txt", movedEdit.ContentHash!);
+    }
+    catch (IOException)
+    {
+        collision = true;
+    }
     Check(collision && (await editor.ReadAsync("empty.txt")).Content == "first line", "move cannot overwrite another file");
     bool escape = false;
-    try { await editor.MoveAsync("nested/Renamed.cs", "../escape.cs", movedEdit.ContentHash!); }
-    catch (ArgumentException) { escape = true; }
+    try
+    {
+        await editor.MoveAsync("nested/Renamed.cs", "../escape.cs", movedEdit.ContentHash!);
+    }
+    catch (ArgumentException)
+    {
+        escape = true;
+    }
     Check(escape && File.Exists(Path.Combine(createRoot, "nested", "Renamed.cs")), "move rejects an escaping destination");
     using (var stopEdit = new CancellationTokenSource())
     {
         stopEdit.Cancel();
-        try { await editor.DeleteAsync("nested/Renamed.cs", movedEdit.ContentHash!, stopEdit.Token); }
+        try
+        {
+            await editor.DeleteAsync("nested/Renamed.cs", movedEdit.ContentHash!, stopEdit.Token);
+        }
         catch (OperationCanceledException) { }
         Check(File.Exists(Path.Combine(createRoot, "nested", "Renamed.cs")), "cancelled delete retains the file");
     }
@@ -244,15 +311,23 @@ try
     Directory.CreateDirectory(gitFixture);
     async Task Git(params string[] arguments)
     {
-        var info = new System.Diagnostics.ProcessStartInfo("git") { WorkingDirectory = gitFixture,
-            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (string argument in arguments) info.ArgumentList.Add(argument);
+        var info = new System.Diagnostics.ProcessStartInfo("git")
+        {
+            WorkingDirectory = gitFixture,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        foreach (string argument in arguments)
+            info.ArgumentList.Add(argument);
         using var process = System.Diagnostics.Process.Start(info)!;
         var stdout = process.StandardOutput.ReadToEndAsync();
         var stderr = process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
         await stdout;
-        if (process.ExitCode != 0) throw new Exception(await stderr);
+        if (process.ExitCode != 0)
+            throw new Exception(await stderr);
         await stderr;
     }
     await Git("init", "--quiet");
@@ -269,8 +344,14 @@ try
     Check(staged.Succeeded && staged.UnifiedDiff.Contains("+original") && !staged.UnifiedDiff.Contains("+changed"),
         "staged diff is distinct from working changes");
     bool rejected = false;
-    try { await gitService.GetWorkingTreeDiffAsync("../untouched.cs"); }
-    catch (ArgumentException) { rejected = true; }
+    try
+    {
+        await gitService.GetWorkingTreeDiffAsync("../untouched.cs");
+    }
+    catch (ArgumentException)
+    {
+        rejected = true;
+    }
     Check(rejected, "Git diff rejects paths outside the selected project");
     Directory.CreateDirectory(Path.Combine(gitFixture, "bin"));
     await File.WriteAllTextAsync(Path.Combine(gitFixture, "bin", "Generated.txt"), "before\n");

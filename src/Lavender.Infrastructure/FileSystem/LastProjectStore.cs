@@ -18,15 +18,25 @@ public sealed class LastProjectStore
     {
         try
         {
-            if (!File.Exists(_path)) return null;
+            if (!File.Exists(_path))
+                return null;
             await using var stream = File.OpenRead(_path);
             var project = await JsonSerializer.DeserializeAsync<LastProject>(stream, cancellationToken: token);
             return project is not null && Directory.Exists(project.ProjectPath) && File.Exists(project.SolutionPath)
                 ? project : null;
         }
-        catch (JsonException) { return null; }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     public async Task SaveAsync(string projectPath, string solutionPath, CancellationToken token = default)

@@ -16,7 +16,9 @@ public sealed class SymbolIndexingService
         _identity = identity;
     }
 
-    public async Task<SymbolIndex> IndexAsync(IndexedProjectContext context, CancellationToken cancellationToken = default)
+    public async Task<SymbolIndex> IndexAsync(
+        IndexedProjectContext context,
+        CancellationToken cancellationToken = default)
     {
         var entries = new List<(CodeSymbol, ISymbol)>();
         foreach (Project project in context.Solution.Projects)

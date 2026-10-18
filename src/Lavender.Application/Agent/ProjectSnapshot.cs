@@ -3,6 +3,10 @@ using System.Text;
 
 namespace Lavender.Application.Agent;
 
+/// <summary>
+/// Detects likely source changes from paths, sizes, and modification times (not file-content hashes).
+/// A changed or unknown revision prevents old tool evidence from being treated as current code.
+/// </summary>
 public static class ProjectSnapshot
 {
     private static readonly HashSet<string> Ignored = new(StringComparer.OrdinalIgnoreCase)
@@ -12,7 +16,8 @@ public static class ProjectSnapshot
 
     public static string? Compute(string? root)
     {
-        if (root is null || !Directory.Exists(root)) return null;
+        if (root is null || !Directory.Exists(root))
+            return null;
         try
         {
             var entries = new List<string>();
@@ -23,10 +28,12 @@ public static class ProjectSnapshot
                 string dir = pending.Pop();
                 foreach (string child in Directory.EnumerateDirectories(dir))
                     if (!Ignored.Contains(Path.GetFileName(child)) &&
-                        !File.GetAttributes(child).HasFlag(FileAttributes.ReparsePoint)) pending.Push(child);
+                        !File.GetAttributes(child).HasFlag(FileAttributes.ReparsePoint))
+                        pending.Push(child);
                 foreach (string path in Directory.EnumerateFiles(dir))
                 {
-                    if (!Extensions.Contains(Path.GetExtension(path))) continue;
+                    if (!Extensions.Contains(Path.GetExtension(path)))
+                        continue;
                     var file = new FileInfo(path);
                     entries.Add($"{Path.GetRelativePath(root, path)}|{file.Length}|{file.LastWriteTimeUtc.Ticks}");
                 }
@@ -34,7 +41,13 @@ public static class ProjectSnapshot
             entries.Sort(StringComparer.Ordinal);
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", entries))));
         }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Lavender.Infrastructure.Retrieval
 {
+    /// <summary>Extracts search terms for the legacy filename/text scoring path.</summary>
     internal class KeywordExtractor
     {
         #region Stop Words

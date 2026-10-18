@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -13,8 +13,10 @@ using Lavender.Core.DataTypes;
 
 namespace Lavender.Infrastructure.Backend
 {
+    /// <summary>HTTP access to the Python backend, plus process lifecycle management for the desktop.</summary>
     public class FastApiService
     {
+        // This singleton is per process: the desktop and MCP server do not share its fields.
         private static FastApiService? _instance;
         private Process? _serverProcess;
         private FileStream? _ownershipLock;
@@ -164,8 +166,15 @@ namespace Lavender.Infrastructure.Backend
             _serverProcess.BeginOutputReadLine();
             _serverProcess.BeginErrorReadLine();
 
-            try { await WaitForServerAsync(cancellationToken); }
-            catch { StopServer(); throw; }
+            try
+            {
+                await WaitForServerAsync(cancellationToken);
+            }
+            catch
+            {
+                StopServer();
+                throw;
+            }
         }
 
         private async Task<bool> IsServerRunningAsync(CancellationToken cancellationToken = default)
@@ -240,7 +249,11 @@ namespace Lavender.Infrastructure.Backend
             return Directory.GetCurrentDirectory();
         }
 
-        public async Task<JsonElement?> EmbedProjectAsync(List<CodeChunk> chunks, string projectPath, string indexId, CancellationToken cancellationToken = default)
+        public async Task<JsonElement?> EmbedProjectAsync(
+            List<CodeChunk> chunks,
+            string projectPath,
+            string indexId,
+            CancellationToken cancellationToken = default)
         {
             var request = new
             {
@@ -260,7 +273,13 @@ namespace Lavender.Infrastructure.Backend
                 ? timings.Clone() : null;
         }
 
-        public async Task<VectorSearchCodeChunk_ObjectRecv> SearchProjectAsync(string query, int groupCount, string projectPath, string indexId, double maxDistance = 0.65, CancellationToken cancellationToken = default)
+        public async Task<VectorSearchCodeChunk_ObjectRecv> SearchProjectAsync(
+            string query,
+            int groupCount,
+            string projectPath,
+            string indexId,
+            double maxDistance = 0.65,
+            CancellationToken cancellationToken = default)
         {
             var request = new
             {

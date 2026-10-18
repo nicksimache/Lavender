@@ -13,6 +13,7 @@ using Microsoft.ML.Tokenizers;
 
 namespace Lavender.Infrastructure.Indexing.Chunking
 {
+    /// <summary>Scans supported source files, creates searchable chunks, and enforces the embedding token budget.</summary>
     public class CodeChunkService
     {
         private const int GenericChunkLineLimit = 200;
@@ -236,12 +237,19 @@ namespace Lavender.Infrastructure.Indexing.Chunking
             {
                 Id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
                     $"{original.Id}:{original.StartLine}:{original.EndLine}:offset:{offset}"))),
-                FilePath = original.FilePath, RelativePath = original.RelativePath,
-                ChunkType = original.ChunkType, Namespace = original.Namespace,
-                ClassName = original.ClassName, MemberName = original.MemberName,
-                Signature = original.Signature, StartLine = start, EndLine = end, Code = code
+                FilePath = original.FilePath,
+                RelativePath = original.RelativePath,
+                ChunkType = original.ChunkType,
+                Namespace = original.Namespace,
+                ClassName = original.ClassName,
+                MemberName = original.MemberName,
+                Signature = original.Signature,
+                StartLine = start,
+                EndLine = end,
+                Code = code
             };
 
+            // Metadata consumes the same token budget as source text; reserve a small boundary margin.
             int metadataTokens = EmbeddingTokenizer.CountTokens(BuildEmbeddingText(Copy("", 0, 0, 0)));
             int budget = CodeTokenBudget - metadataTokens - 16;
             if (budget <= 0 || original.Code.Length == 0)
@@ -258,16 +266,19 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                 {
                     if (n > 0 && n < remaining.Length &&
                         ((char.IsHighSurrogate(remaining[n - 1]) && char.IsLowSurrogate(remaining[n])) ||
-                         (remaining[n - 1] == '\r' && remaining[n] == '\n'))) n--;
+                         (remaining[n - 1] == '\r' && remaining[n] == '\n')))
+                        n--;
                     return n;
                 }
                 length = SafeBoundary(length);
                 if (length < remaining.Length && length > 0)
                 {
                     int newline = remaining.LastIndexOf('\n', length - 1, length);
-                    if (newline >= 0) length = newline + 1;
+                    if (newline >= 0)
+                        length = newline + 1;
                 }
 
+                // Verify the complete embedding text, shrinking again if token boundaries changed.
                 CodeChunk part;
                 while (true)
                 {
@@ -275,7 +286,8 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                         throw new InvalidOperationException($"Cannot fit chunk in token budget: {original.FilePath}, line {line}");
                     part = Copy(remaining[..length], offset, line, line);
                     part.EmbeddingText = BuildEmbeddingText(part);
-                    if (EmbeddingTokenizer.CountTokens(part.EmbeddingText) <= CodeTokenBudget) break;
+                    if (EmbeddingTokenizer.CountTokens(part.EmbeddingText) <= CodeTokenBudget)
+                        break;
                     length = SafeBoundary(length / 2);
                 }
                 int breaks = 0, endLine = line;
@@ -284,10 +296,12 @@ namespace Lavender.Infrastructure.Indexing.Chunking
                     endLine = line + breaks;
                     if (part.Code[i] == '\r')
                     {
-                        if (i + 1 < part.Code.Length && part.Code[i + 1] == '\n') i++;
+                        if (i + 1 < part.Code.Length && part.Code[i + 1] == '\n')
+                            i++;
                         breaks++;
                     }
-                    else if (part.Code[i] == '\n') breaks++;
+                    else if (part.Code[i] == '\n')
+                        breaks++;
                 }
                 // Synthesized summaries describe a scope, not contiguous source lines.
                 part.StartLine = summary ? original.StartLine : line;

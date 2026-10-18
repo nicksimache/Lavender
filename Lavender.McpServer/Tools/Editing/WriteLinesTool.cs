@@ -13,5 +13,9 @@ public sealed class WriteLinesTool(LavenderMcpState state)
         CancellationToken cancellationToken = default) => FileToolExecution.RunAsync(path, async () =>
             FileToolExecution.Result(await state.EditFileAsync(
                 editor => editor.WriteLinesAsync(path, startLine, endLine, replacementCode, expectedContentHash, cancellationToken),
-                cancellationToken), "written") with { StartLine = startLine, EndLine = endLine });
+                cancellationToken), "written") with
+            {
+                StartLine = startLine,
+                EndLine = endLine
+            });
 }

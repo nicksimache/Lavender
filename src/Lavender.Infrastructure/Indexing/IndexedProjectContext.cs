@@ -32,7 +32,9 @@ public sealed class IndexedProjectContext : IDisposable
         WorkspaceWarnings = warnings;
     }
 
-    public static async Task<IndexedProjectContext> OpenAsync(string solutionOrProjectPath, CancellationToken cancellationToken = default)
+    public static async Task<IndexedProjectContext> OpenAsync(
+        string solutionOrProjectPath,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(solutionOrProjectPath);
 

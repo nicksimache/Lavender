@@ -16,7 +16,10 @@ public sealed class CodeRelationshipIndexer
         _identity = identity;
     }
 
-    public async Task<CodeRelationshipGraph> IndexAsync(IndexedProjectContext context, SymbolIndex symbols, CancellationToken cancellationToken = default)
+    public async Task<CodeRelationshipGraph> IndexAsync(
+        IndexedProjectContext context,
+        SymbolIndex symbols,
+        CancellationToken cancellationToken = default)
     {
         var result = new List<CodeRelationship>();
         var seen = new HashSet<string>(StringComparer.Ordinal);

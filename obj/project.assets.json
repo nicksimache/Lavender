@@ -244,6 +244,80 @@
           }
         }
       },
+      "Microsoft.CodeAnalysis.CSharp.Features/5.6.0": {
+        "type": "package",
+        "dependencies": {
+          "Humanizer.Core": "2.14.1",
+          "Microsoft.CodeAnalysis.Analyzers": "5.3.0",
+          "Microsoft.CodeAnalysis.CSharp": "[5.6.0]",
+          "Microsoft.CodeAnalysis.CSharp.Workspaces": "[5.6.0]",
+          "Microsoft.CodeAnalysis.Common": "[5.6.0]",
+          "Microsoft.CodeAnalysis.Elfie": "1.0.0",
+          "Microsoft.CodeAnalysis.Features": "[5.6.0]",
+          "Microsoft.CodeAnalysis.Workspaces.Common": "[5.6.0]",
+          "Microsoft.DiaSymReader": "2.0.0",
+          "System.Collections.Immutable": "10.0.1",
+          "System.Composition": "10.0.1",
+          "System.Configuration.ConfigurationManager": "10.0.1",
+          "System.Diagnostics.EventLog": "10.0.1",
+          "System.IO.Pipelines": "10.0.1",
+          "System.Reflection.Metadata": "10.0.1",
+          "System.Security.Cryptography.ProtectedData": "10.0.1",
+          "System.Text.Encodings.Web": "10.0.1",
+          "System.Text.Json": "10.0.1"
+        },
+        "compile": {
+          "lib/net8.0/Microsoft.CodeAnalysis.CSharp.Features.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.CodeAnalysis.CSharp.Features.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "resource": {
+          "lib/net8.0/cs/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "cs"
+          },
+          "lib/net8.0/de/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "de"
+          },
+          "lib/net8.0/es/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "es"
+          },
+          "lib/net8.0/fr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "fr"
+          },
+          "lib/net8.0/it/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "it"
+          },
+          "lib/net8.0/ja/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "ja"
+          },
+          "lib/net8.0/ko/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "ko"
+          },
+          "lib/net8.0/pl/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "pl"
+          },
+          "lib/net8.0/pt-BR/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "pt-BR"
+          },
+          "lib/net8.0/ru/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "ru"
+          },
+          "lib/net8.0/tr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "tr"
+          },
+          "lib/net8.0/zh-Hans/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "zh-Hans"
+          },
+          "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.Features.resources.dll": {
+            "locale": "zh-Hant"
+          }
+        }
+      },
       "Microsoft.CodeAnalysis.CSharp.Workspaces/5.6.0": {
         "type": "package",
         "dependencies": {
@@ -305,6 +379,151 @@
             "locale": "zh-Hans"
           },
           "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll": {
+            "locale": "zh-Hant"
+          }
+        }
+      },
+      "Microsoft.CodeAnalysis.Elfie/1.0.0": {
+        "type": "package",
+        "dependencies": {
+          "System.Configuration.ConfigurationManager": "4.5.0",
+          "System.Data.DataSetExtensions": "4.5.0"
+        },
+        "compile": {
+          "lib/netstandard2.0/Microsoft.CodeAnalysis.Elfie.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.CodeAnalysis.Elfie.dll": {}
+        }
+      },
+      "Microsoft.CodeAnalysis.Features/5.6.0": {
+        "type": "package",
+        "dependencies": {
+          "Humanizer.Core": "2.14.1",
+          "Microsoft.CodeAnalysis.Analyzers": "5.3.0",
+          "Microsoft.CodeAnalysis.Common": "[5.6.0]",
+          "Microsoft.CodeAnalysis.Elfie": "1.0.0",
+          "Microsoft.CodeAnalysis.Scripting.Common": "[5.6.0]",
+          "Microsoft.CodeAnalysis.Workspaces.Common": "[5.6.0]",
+          "Microsoft.DiaSymReader": "2.0.0",
+          "System.Collections.Immutable": "10.0.1",
+          "System.Composition": "10.0.1",
+          "System.Configuration.ConfigurationManager": "10.0.1",
+          "System.Diagnostics.EventLog": "10.0.1",
+          "System.IO.Pipelines": "10.0.1",
+          "System.Reflection.Metadata": "10.0.1",
+          "System.Security.Cryptography.ProtectedData": "10.0.1",
+          "System.Text.Encodings.Web": "10.0.1",
+          "System.Text.Json": "10.0.1"
+        },
+        "compile": {
+          "lib/net8.0/Microsoft.CodeAnalysis.Features.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.CodeAnalysis.Features.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "resource": {
+          "lib/net8.0/cs/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "cs"
+          },
+          "lib/net8.0/de/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "de"
+          },
+          "lib/net8.0/es/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "es"
+          },
+          "lib/net8.0/fr/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "fr"
+          },
+          "lib/net8.0/it/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "it"
+          },
+          "lib/net8.0/ja/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "ja"
+          },
+          "lib/net8.0/ko/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "ko"
+          },
+          "lib/net8.0/pl/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "pl"
+          },
+          "lib/net8.0/pt-BR/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "pt-BR"
+          },
+          "lib/net8.0/ru/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "ru"
+          },
+          "lib/net8.0/tr/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "tr"
+          },
+          "lib/net8.0/zh-Hans/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "zh-Hans"
+          },
+          "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.Features.resources.dll": {
+            "locale": "zh-Hant"
+          }
+        }
+      },
+      "Microsoft.CodeAnalysis.Scripting.Common/5.6.0": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.CodeAnalysis.Analyzers": "5.3.0",
+          "Microsoft.CodeAnalysis.Common": "[5.6.0]",
+          "System.Collections.Immutable": "10.0.1",
+          "System.Reflection.Metadata": "10.0.1"
+        },
+        "compile": {
+          "lib/net8.0/Microsoft.CodeAnalysis.Scripting.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.CodeAnalysis.Scripting.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "resource": {
+          "lib/net8.0/cs/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "cs"
+          },
+          "lib/net8.0/de/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "de"
+          },
+          "lib/net8.0/es/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "es"
+          },
+          "lib/net8.0/fr/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "fr"
+          },
+          "lib/net8.0/it/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "it"
+          },
+          "lib/net8.0/ja/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "ja"
+          },
+          "lib/net8.0/ko/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "ko"
+          },
+          "lib/net8.0/pl/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "pl"
+          },
+          "lib/net8.0/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "pt-BR"
+          },
+          "lib/net8.0/ru/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "ru"
+          },
+          "lib/net8.0/tr/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "tr"
+          },
+          "lib/net8.0/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll": {
+            "locale": "zh-Hans"
+          },
+          "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll": {
             "locale": "zh-Hant"
           }
         }
@@ -598,6 +817,19 @@
         },
         "runtime": {
           "lib/net8.0/Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts.dll": {
+            "related": ".pdb;.xml"
+          }
+        }
+      },
+      "Microsoft.DiaSymReader/2.0.0": {
+        "type": "package",
+        "compile": {
+          "lib/netstandard2.0/Microsoft.DiaSymReader.dll": {
+            "related": ".pdb;.xml"
+          }
+        },
+        "runtime": {
+          "lib/netstandard2.0/Microsoft.DiaSymReader.dll": {
             "related": ".pdb;.xml"
           }
         }
@@ -1102,6 +1334,35 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
+      "System.Configuration.ConfigurationManager/10.0.1": {
+        "type": "package",
+        "dependencies": {
+          "System.Diagnostics.EventLog": "10.0.1",
+          "System.Security.Cryptography.ProtectedData": "10.0.1"
+        },
+        "compile": {
+          "lib/net8.0/System.Configuration.ConfigurationManager.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.Configuration.ConfigurationManager.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
+        }
+      },
+      "System.Data.DataSetExtensions/4.5.0": {
+        "type": "package",
+        "compile": {
+          "ref/netstandard2.0/System.Data.DataSetExtensions.dll": {}
+        },
+        "runtime": {
+          "lib/netstandard2.0/System.Data.DataSetExtensions.dll": {}
+        }
+      },
       "System.Diagnostics.DiagnosticSource/10.0.7": {
         "type": "package",
         "compile": {
@@ -1116,6 +1377,32 @@
         },
         "build": {
           "buildTransitive/net8.0/_._": {}
+        }
+      },
+      "System.Diagnostics.EventLog/10.0.1": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/System.Diagnostics.EventLog.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.Diagnostics.EventLog.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
+        },
+        "runtimeTargets": {
+          "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.Messages.dll": {
+            "assetType": "runtime",
+            "rid": "win"
+          },
+          "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.dll": {
+            "assetType": "runtime",
+            "rid": "win"
+          }
         }
       },
       "System.IO.Pipelines/10.0.7": {
@@ -1207,6 +1494,22 @@
         },
         "build": {
           "buildTransitive/net6.0/_._": {}
+        }
+      },
+      "System.Security.Cryptography.ProtectedData/10.0.1": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/System.Security.Cryptography.ProtectedData.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/System.Security.Cryptography.ProtectedData.dll": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "buildTransitive/net8.0/_._": {}
         }
       },
       "System.Text.Encodings.Web/10.0.6": {
@@ -1663,6 +1966,67 @@
         "microsoft.codeanalysis.csharp.nuspec"
       ]
     },
+    "Microsoft.CodeAnalysis.CSharp.Features/5.6.0": {
+      "sha512": "b0YkKB3B8bK1tiwqe3vEF7YJBQzYwkI/jjjzEHrbmfmLU7GBEZ4w4UqwjJjA3gMihURY3KOSTKgpns4rxzYNcg==",
+      "type": "package",
+      "path": "microsoft.codeanalysis.csharp.features/5.6.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "ThirdPartyNotices.rtf",
+        "lib/net10.0/Microsoft.CodeAnalysis.CSharp.Features.dll",
+        "lib/net10.0/Microsoft.CodeAnalysis.CSharp.Features.pdb",
+        "lib/net10.0/Microsoft.CodeAnalysis.CSharp.Features.xml",
+        "lib/net10.0/cs/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/de/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/es/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/fr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/it/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/ja/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/ko/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/pl/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/pt-BR/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/ru/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/tr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/zh-Hans/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net10.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/Microsoft.CodeAnalysis.CSharp.Features.dll",
+        "lib/net8.0/Microsoft.CodeAnalysis.CSharp.Features.pdb",
+        "lib/net8.0/Microsoft.CodeAnalysis.CSharp.Features.xml",
+        "lib/net8.0/cs/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/de/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/es/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/fr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/it/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/ja/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/ko/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/pl/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/pt-BR/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/ru/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/tr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/zh-Hans/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.CSharp.Features.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.CSharp.Features.pdb",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.CSharp.Features.xml",
+        "lib/netstandard2.0/cs/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/de/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/es/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/fr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/it/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/ja/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/ko/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/pl/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/pt-BR/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/ru/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/tr/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/zh-Hans/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "lib/netstandard2.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.Features.resources.dll",
+        "microsoft.codeanalysis.csharp.features.5.6.0.nupkg.sha512",
+        "microsoft.codeanalysis.csharp.features.nuspec"
+      ]
+    },
     "Microsoft.CodeAnalysis.CSharp.Workspaces/5.6.0": {
       "sha512": "ojTMowxK2X0QPNSixGLI5RBgBQLgo1Blwyct4+HWCVYLXT4iKCyVKKmGjxw4h0AvPzGgd0XfWzSGKJk/jS2LkA==",
       "type": "package",
@@ -1722,6 +2086,141 @@
         "lib/netstandard2.0/zh-Hant/Microsoft.CodeAnalysis.CSharp.Workspaces.resources.dll",
         "microsoft.codeanalysis.csharp.workspaces.5.6.0.nupkg.sha512",
         "microsoft.codeanalysis.csharp.workspaces.nuspec"
+      ]
+    },
+    "Microsoft.CodeAnalysis.Elfie/1.0.0": {
+      "sha512": "r12elUp4MRjdnRfxEP+xqVSUUfG3yIJTBEJGwbfvF5oU4m0jb9HC0gFG28V/dAkYGMkRmHVi3qvrnBLQSw9X3Q==",
+      "type": "package",
+      "path": "microsoft.codeanalysis.elfie/1.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net45/Microsoft.CodeAnalysis.Elfie.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Elfie.dll",
+        "microsoft.codeanalysis.elfie.1.0.0.nupkg.sha512",
+        "microsoft.codeanalysis.elfie.nuspec"
+      ]
+    },
+    "Microsoft.CodeAnalysis.Features/5.6.0": {
+      "sha512": "+y+htKWSQGStSjpyRHczEYlLIZmAeFp0uc7RHd5xWXOgCTu0x6y37h7spKyp4yqpLpiutp4UHdlgfaU+MRiLew==",
+      "type": "package",
+      "path": "microsoft.codeanalysis.features/5.6.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "ThirdPartyNotices.rtf",
+        "lib/net10.0/Microsoft.CodeAnalysis.Features.dll",
+        "lib/net10.0/Microsoft.CodeAnalysis.Features.pdb",
+        "lib/net10.0/Microsoft.CodeAnalysis.Features.xml",
+        "lib/net10.0/cs/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/de/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/es/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/fr/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/it/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/ja/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/ko/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/pl/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/pt-BR/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/ru/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/tr/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/zh-Hans/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net10.0/zh-Hant/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/Microsoft.CodeAnalysis.Features.dll",
+        "lib/net8.0/Microsoft.CodeAnalysis.Features.pdb",
+        "lib/net8.0/Microsoft.CodeAnalysis.Features.xml",
+        "lib/net8.0/cs/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/de/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/es/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/fr/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/it/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/ja/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/ko/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/pl/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/pt-BR/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/ru/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/tr/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/zh-Hans/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Features.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Features.pdb",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Features.xml",
+        "lib/netstandard2.0/cs/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/de/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/es/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/fr/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/it/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/ja/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/ko/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/pl/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/pt-BR/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/ru/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/tr/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/zh-Hans/Microsoft.CodeAnalysis.Features.resources.dll",
+        "lib/netstandard2.0/zh-Hant/Microsoft.CodeAnalysis.Features.resources.dll",
+        "microsoft.codeanalysis.features.5.6.0.nupkg.sha512",
+        "microsoft.codeanalysis.features.nuspec"
+      ]
+    },
+    "Microsoft.CodeAnalysis.Scripting.Common/5.6.0": {
+      "sha512": "2hVkfxVWLRfMagSqnVFIC81Fp9+05r7XR+f8jKJDGZNNLLC2H92zkc8tHRDrMHKVQ4mlozPsIswrQvXozZYeew==",
+      "type": "package",
+      "path": "microsoft.codeanalysis.scripting.common/5.6.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "ThirdPartyNotices.rtf",
+        "lib/net10.0/Microsoft.CodeAnalysis.Scripting.dll",
+        "lib/net10.0/Microsoft.CodeAnalysis.Scripting.pdb",
+        "lib/net10.0/Microsoft.CodeAnalysis.Scripting.xml",
+        "lib/net10.0/cs/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/de/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/es/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/fr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/it/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/ja/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/ko/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/pl/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/ru/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/tr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net10.0/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/Microsoft.CodeAnalysis.Scripting.dll",
+        "lib/net8.0/Microsoft.CodeAnalysis.Scripting.pdb",
+        "lib/net8.0/Microsoft.CodeAnalysis.Scripting.xml",
+        "lib/net8.0/cs/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/de/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/es/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/fr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/it/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/ja/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/ko/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/pl/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/ru/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/tr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/net8.0/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Scripting.dll",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Scripting.pdb",
+        "lib/netstandard2.0/Microsoft.CodeAnalysis.Scripting.xml",
+        "lib/netstandard2.0/cs/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/de/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/es/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/fr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/it/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/ja/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/ko/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/pl/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/ru/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/tr/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "lib/netstandard2.0/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll",
+        "microsoft.codeanalysis.scripting.common.5.6.0.nupkg.sha512",
+        "microsoft.codeanalysis.scripting.common.nuspec"
       ]
     },
     "Microsoft.CodeAnalysis.Workspaces.Common/5.6.0": {
@@ -1889,6 +2388,21 @@
         "lib/net8.0/Microsoft.CodeAnalysis.Workspaces.MSBuild.Contracts.xml",
         "microsoft.codeanalysis.workspaces.msbuild.contracts.5.6.0.nupkg.sha512",
         "microsoft.codeanalysis.workspaces.msbuild.contracts.nuspec"
+      ]
+    },
+    "Microsoft.DiaSymReader/2.0.0": {
+      "sha512": "QcZrCETsBJqy/vQpFtJc+jSXQ0K5sucQ6NUFbTNVHD4vfZZOwjZ/3sBzczkC4DityhD3AVO/+K/+9ioLs1AgRA==",
+      "type": "package",
+      "path": "microsoft.diasymreader/2.0.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "lib/netstandard2.0/Microsoft.DiaSymReader.dll",
+        "lib/netstandard2.0/Microsoft.DiaSymReader.pdb",
+        "lib/netstandard2.0/Microsoft.DiaSymReader.xml",
+        "microsoft.diasymreader.2.0.0.nupkg.sha512",
+        "microsoft.diasymreader.nuspec"
       ]
     },
     "Microsoft.Extensions.AI.Abstractions/10.5.2": {
@@ -2664,6 +3178,54 @@
         "useSharedDesignerContext.txt"
       ]
     },
+    "System.Configuration.ConfigurationManager/10.0.1": {
+      "sha512": "HfOAIlSA8OuaxBZD6xjsUWhtB0KdKSWEfRId8gSGveLUjuP6G8IxfiFgJNxaiRIEC1kx4pSvz3Em5xW/J6LLxA==",
+      "type": "package",
+      "path": "system.configuration.configurationmanager/10.0.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.Configuration.ConfigurationManager.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.Configuration.ConfigurationManager.targets",
+        "lib/net10.0/System.Configuration.ConfigurationManager.dll",
+        "lib/net10.0/System.Configuration.ConfigurationManager.xml",
+        "lib/net462/System.Configuration.ConfigurationManager.dll",
+        "lib/net462/System.Configuration.ConfigurationManager.xml",
+        "lib/net8.0/System.Configuration.ConfigurationManager.dll",
+        "lib/net8.0/System.Configuration.ConfigurationManager.xml",
+        "lib/net9.0/System.Configuration.ConfigurationManager.dll",
+        "lib/net9.0/System.Configuration.ConfigurationManager.xml",
+        "lib/netstandard2.0/System.Configuration.ConfigurationManager.dll",
+        "lib/netstandard2.0/System.Configuration.ConfigurationManager.xml",
+        "system.configuration.configurationmanager.10.0.1.nupkg.sha512",
+        "system.configuration.configurationmanager.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "System.Data.DataSetExtensions/4.5.0": {
+      "sha512": "221clPs1445HkTBZPL+K9sDBdJRB8UN8rgjO3ztB0CQ26z//fmJXtlsr6whGatscsKGBrhJl5bwJuKSA8mwFOw==",
+      "type": "package",
+      "path": "system.data.datasetextensions/4.5.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net45/_._",
+        "lib/netstandard2.0/System.Data.DataSetExtensions.dll",
+        "ref/net45/_._",
+        "ref/netstandard2.0/System.Data.DataSetExtensions.dll",
+        "system.data.datasetextensions.4.5.0.nupkg.sha512",
+        "system.data.datasetextensions.nuspec",
+        "useSharedDesignerContext.txt",
+        "version.txt"
+      ]
+    },
     "System.Diagnostics.DiagnosticSource/10.0.7": {
       "sha512": "Fu6AxFf9bHz/Q7DQmxKC0o+UgFes8bs2Xh+PH/x31yExRAOASTwlzjZsISTtqVU5gQshKHLZopxEBTaIyfv0wg==",
       "type": "package",
@@ -2689,6 +3251,44 @@
         "lib/netstandard2.0/System.Diagnostics.DiagnosticSource.xml",
         "system.diagnostics.diagnosticsource.10.0.7.nupkg.sha512",
         "system.diagnostics.diagnosticsource.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
+    "System.Diagnostics.EventLog/10.0.1": {
+      "sha512": "xfaHEHVDkMOOZR5S6ZGezD0+vekdH1Nx/9Ih8/rOqOGSOk1fxiN3u94bYkBW/wigj0Uw2Wt3vvRj9mtYdgwEjw==",
+      "type": "package",
+      "path": "system.diagnostics.eventlog/10.0.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.Diagnostics.EventLog.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.Diagnostics.EventLog.targets",
+        "lib/net10.0/System.Diagnostics.EventLog.dll",
+        "lib/net10.0/System.Diagnostics.EventLog.xml",
+        "lib/net462/System.Diagnostics.EventLog.dll",
+        "lib/net462/System.Diagnostics.EventLog.xml",
+        "lib/net8.0/System.Diagnostics.EventLog.dll",
+        "lib/net8.0/System.Diagnostics.EventLog.xml",
+        "lib/net9.0/System.Diagnostics.EventLog.dll",
+        "lib/net9.0/System.Diagnostics.EventLog.xml",
+        "lib/netstandard2.0/System.Diagnostics.EventLog.dll",
+        "lib/netstandard2.0/System.Diagnostics.EventLog.xml",
+        "runtimes/win/lib/net10.0/System.Diagnostics.EventLog.Messages.dll",
+        "runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll",
+        "runtimes/win/lib/net10.0/System.Diagnostics.EventLog.xml",
+        "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.Messages.dll",
+        "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.dll",
+        "runtimes/win/lib/net8.0/System.Diagnostics.EventLog.xml",
+        "runtimes/win/lib/net9.0/System.Diagnostics.EventLog.Messages.dll",
+        "runtimes/win/lib/net9.0/System.Diagnostics.EventLog.dll",
+        "runtimes/win/lib/net9.0/System.Diagnostics.EventLog.xml",
+        "system.diagnostics.eventlog.10.0.1.nupkg.sha512",
+        "system.diagnostics.eventlog.nuspec",
         "useSharedDesignerContext.txt"
       ]
     },
@@ -2853,6 +3453,41 @@
         "system.runtime.compilerservices.unsafe.nuspec"
       ]
     },
+    "System.Security.Cryptography.ProtectedData/10.0.1": {
+      "sha512": "9SqHNq+lAjZeyPcm69FTQEjr+wsRYvkS3aW8yxoEndVYwDRkCrsP/44QPqpWHwzevoX26rkOoQ6kr7GZWngw2A==",
+      "type": "package",
+      "path": "system.security.cryptography.protecteddata/10.0.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "PACKAGE.md",
+        "THIRD-PARTY-NOTICES.TXT",
+        "buildTransitive/net461/System.Security.Cryptography.ProtectedData.targets",
+        "buildTransitive/net462/_._",
+        "buildTransitive/net8.0/_._",
+        "buildTransitive/netcoreapp2.0/System.Security.Cryptography.ProtectedData.targets",
+        "lib/MonoAndroid10/_._",
+        "lib/MonoTouch10/_._",
+        "lib/net10.0/System.Security.Cryptography.ProtectedData.dll",
+        "lib/net10.0/System.Security.Cryptography.ProtectedData.xml",
+        "lib/net462/System.Security.Cryptography.ProtectedData.dll",
+        "lib/net462/System.Security.Cryptography.ProtectedData.xml",
+        "lib/net8.0/System.Security.Cryptography.ProtectedData.dll",
+        "lib/net8.0/System.Security.Cryptography.ProtectedData.xml",
+        "lib/net9.0/System.Security.Cryptography.ProtectedData.dll",
+        "lib/net9.0/System.Security.Cryptography.ProtectedData.xml",
+        "lib/netstandard2.0/System.Security.Cryptography.ProtectedData.dll",
+        "lib/netstandard2.0/System.Security.Cryptography.ProtectedData.xml",
+        "lib/xamarinios10/_._",
+        "lib/xamarinmac20/_._",
+        "lib/xamarintvos10/_._",
+        "lib/xamarinwatchos10/_._",
+        "system.security.cryptography.protecteddata.10.0.1.nupkg.sha512",
+        "system.security.cryptography.protecteddata.nuspec",
+        "useSharedDesignerContext.txt"
+      ]
+    },
     "System.Text.Encodings.Web/10.0.6": {
       "sha512": "o7zWD39jHesxpHyMSWAf+CjM+NaEIV49IJ8tasAsnaVkRcLP33+5aobgxeKLJRLQQfeciO7BbW5vXCUMzPoU6w==",
       "type": "package",
@@ -2969,6 +3604,7 @@
       "Microsoft.Build.Framework >= 17.11.48",
       "Microsoft.Build.Locator >= 1.11.2",
       "Microsoft.CodeAnalysis.CSharp >= 5.6.0",
+      "Microsoft.CodeAnalysis.CSharp.Features >= 5.6.0",
       "Microsoft.CodeAnalysis.CSharp.Workspaces >= 5.6.0",
       "Microsoft.CodeAnalysis.Workspaces.MSBuild >= 5.6.0",
       "Microsoft.ML.Tokenizers >= 2.0.0",
@@ -3036,6 +3672,10 @@
             "version": "[1.11.2, )"
           },
           "Microsoft.CodeAnalysis.CSharp": {
+            "target": "Package",
+            "version": "[5.6.0, )"
+          },
+          "Microsoft.CodeAnalysis.CSharp.Features": {
             "target": "Package",
             "version": "[5.6.0, )"
           },
