@@ -26,6 +26,8 @@ namespace Lavender.App
         private readonly LinkedList<string> _recentFiles = new(); // Most recent path first; no duplicates.
         private OpenFileTab? _activeFile;
         private readonly EditorAssistance _editorAssistance;
+        private CancellationTokenSource? _openFileRequest;
+        private bool _settingFileSelection;
 
         // Selected project and explorer filters.
         private string? _selectedProjectPath;
@@ -82,7 +84,13 @@ namespace Lavender.App
                 FilePreviewBox,
                 () => _openFiles.ToDictionary(tab => tab.FullPath, tab => tab.Document.Text,
                     StringComparer.OrdinalIgnoreCase),
-                AppendAgentActivity);
+                AppendAgentActivity,
+                loading =>
+                {
+                    FilePreviewBox.Opacity = loading ? 0 : 1;
+                    FilePreviewBox.IsEnabled = !loading;
+                    EditorLoadingOverlay.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
+                });
             OpenFileTabs.ItemsSource = _openFiles;
 
             AgentSettings settings = AgentSettings.Load();
@@ -326,12 +334,12 @@ namespace Lavender.App
 
         private async Task DisplayProjectAsync(string selectedPath, string solutionOrProjectPath)
         {
+            _openFileRequest?.Cancel();
             if (!Directory.Exists(selectedPath) || !File.Exists(solutionOrProjectPath))
                 throw new IOException("The selected project folder or solution no longer exists.");
             _selectedProjectPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(selectedPath));
             _selectedSolutionPath = solutionOrProjectPath;
-            _editorAssistance.SelectFile(_selectedSolutionPath, currSelectedFile);
-            _editorAssistance.ReloadProject();
+            _editorAssistance.SelectFile(_selectedSolutionPath, currSelectedFile, reloadProject: true);
             // Remember the selection even if indexing fails or the app closes during indexing.
             string? preferenceError = null;
             try
@@ -830,6 +838,7 @@ namespace Lavender.App
             return normalizedPath.Substring(lastIndex + 1);
         }
 
+        /// <summary>Prepares a selected explorer file before adding or activating its editor tab.</summary>
         private void FolderView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
             if (e.NewValue is not TreeViewItem item)
@@ -848,10 +857,9 @@ namespace Lavender.App
                 if (tab == null)
                 {
                     tab = new OpenFileTab(path);
-                    _openFiles.Add(tab);
                 }
 
-                OpenFileTabs.SelectedItem = tab;
+                OpenPreparedFile(tab);
             }
         }
 
@@ -859,6 +867,7 @@ namespace Lavender.App
 
         #region Editor tabs, saving, and highlighting
 
+        /// <summary>Configures editor appearance and the window-level save shortcut.</summary>
         private void ConfigureCodeEditor()
         {
             // Space between the line-number gutter and the first code character.
@@ -880,10 +889,64 @@ namespace Lavender.App
             FilePreviewBox.TextArea.SelectionForeground = Brushes.White;
         }
 
+        /// <summary>Keeps the current tab active while preparing the requested tab.</summary>
         private void OpenFileTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (OpenFileTabs.SelectedItem is not OpenFileTab tab || ReferenceEquals(tab, _activeFile))
+            if (_settingFileSelection || OpenFileTabs.SelectedItem is not OpenFileTab tab)
                 return;
+            // Keep the current document and selected tab together until the new one is ready.
+            _settingFileSelection = true;
+            try { OpenFileTabs.SelectedItem = _activeFile; }
+            finally { _settingFileSelection = false; }
+            OpenPreparedFile(tab);
+        }
+
+        /// <summary>Cancels obsolete navigation and prepares a current snapshot before switching tabs.</summary>
+        private async void OpenPreparedFile(OpenFileTab tab)
+        {
+            _openFileRequest?.Cancel();
+            if (ReferenceEquals(tab, _activeFile))
+                return;
+            using var request = CancellationTokenSource.CreateLinkedTokenSource(_windowLifetime.Token);
+            _openFileRequest = request;
+            try
+            {
+                string? project = _selectedSolutionPath;
+                Microsoft.CodeAnalysis.Classification.ClassifiedSpan[] spans;
+                while (true)
+                {
+                    int revision = _editorAssistance.Revision;
+                    string text = tab.Document.Text;
+                    try
+                    {
+                        spans = await _editorAssistance.PrepareFileAsync(project, tab.FullPath, text, request.Token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        AppendAgentActivity($"Editor highlighting: {ex.Message}; opening with basic highlighting.");
+                        spans = Array.Empty<Microsoft.CodeAnalysis.Classification.ClassifiedSpan>();
+                    }
+                    request.Token.ThrowIfCancellationRequested();
+                    if (project != _selectedSolutionPath)
+                        return;
+                    // The visible file remains editable while the next tab is prepared.
+                    if (revision == _editorAssistance.Revision && text == tab.Document.Text)
+                        break;
+                }
+                ActivatePreparedFile(tab, spans);
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { AppendAgentActivity($"Could not open {tab.FileName}: {ex.Message}"); }
+            finally
+            {
+                if (ReferenceEquals(_openFileRequest, request))
+                    _openFileRequest = null;
+            }
+        }
+
+        /// <summary>Atomically switches the selected tab, document, and prepared highlighting while restoring its view.</summary>
+        private void ActivatePreparedFile(OpenFileTab tab, Microsoft.CodeAnalysis.Classification.ClassifiedSpan[] spans)
+        {
             if (_activeFile != null)
             {
                 _activeFile.CaretOffset = FilePreviewBox.CaretOffset;
@@ -892,10 +955,18 @@ namespace Lavender.App
             }
 
             _activeFile = tab;
+            _settingFileSelection = true;
+            try
+            {
+                if (!_openFiles.Contains(tab))
+                    _openFiles.Add(tab);
+                OpenFileTabs.SelectedItem = tab;
+            }
+            finally { _settingFileSelection = false; }
             currSelectedFile = tab.FullPath;
             FilePreviewBox.Document = tab.Document;
             FilePreviewBox.Encoding = tab.Encoding;
-            _editorAssistance.SelectFile(_selectedSolutionPath, tab.FullPath);
+            _editorAssistance.SelectFile(_selectedSolutionPath, tab.FullPath, preparedSpans: spans);
             FilePreviewBox.CaretOffset = Math.Min(tab.CaretOffset, tab.Document.TextLength);
             FilePreviewBox.ScrollToVerticalOffset(tab.VerticalOffset);
             FilePreviewBox.ScrollToHorizontalOffset(tab.HorizontalOffset);

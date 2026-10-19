@@ -458,6 +458,14 @@
                                    WordWrap="False"
                                    VerticalScrollBarVisibility="Auto"
                                    HorizontalScrollBarVisibility="Auto"/>
+                <Border x:Name="EditorLoadingOverlay" Grid.Row="1"
+                        Background="{StaticResource EditorBackground}"
+                        Visibility="Collapsed">
+                    <TextBlock Text=""
+                               Foreground="#A6ADC8"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
             </Grid>
 
             <!-- Assistant -->
