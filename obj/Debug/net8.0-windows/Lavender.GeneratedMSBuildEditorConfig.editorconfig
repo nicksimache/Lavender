@@ -21,3 +21,6 @@ build_property.RootNamespace = Lavender
 build_property.ProjectDir = C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.CsWinRTUseWindowsUIXamlProjections = false
+build_property.EffectiveAnalysisLevelStyle = 8.0
+build_property.EnableCodeStyleSeverity = 

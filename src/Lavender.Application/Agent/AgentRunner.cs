@@ -43,6 +43,7 @@ public sealed class AgentRunner
     private readonly IConversationStore _conversations;
     private readonly SemaphoreSlim _runLock = new(1, 1);
     public event Action<string>? Progress;
+    public event Action<string>? ResponseDelta;
     public event Action<ToolExecutionRecord>? ToolCompleted;
 
     public AgentRunner(
@@ -126,7 +127,7 @@ public sealed class AgentRunner
                 if (completion.FinishReason != ChatFinishReason.ToolCalls ||
                     completion.ToolCalls.Count == 0)
                 {
-                    string answer = turn.Steps.Count == 0 ? GetCompletionText(completion)
+                    string answer = turn.Steps.Count == 0 ? await CompleteDirectAnswerAsync(messages, completion, cancellationToken)
                         : await CompleteFinalAnswerAsync(turn, messages, cancellationToken);
                     return await FinishAsync(
                         conversation, turn, answer,
@@ -389,8 +390,25 @@ public sealed class AgentRunner
             "Do not request further tools. Keep the answer concise."));
         messages.Add(new UserChatMessage(ToolUseSummary.BuildFinalPrompt(toolUses)));
         Progress?.Invoke("Summarizing tool results…");
+        if (ResponseDelta is not null)
+            return await _model.CompleteTextStreamingAsync(messages, new ChatCompletionOptions(),
+                delta => ResponseDelta?.Invoke(delta), cancellationToken);
         ChatCompletion completion = await _model.CompleteAsync(messages, new ChatCompletionOptions(), cancellationToken);
         return GetCompletionText(completion);
+    }
+
+    private async Task<string> CompleteDirectAnswerAsync(List<ChatMessage> messages,
+        ChatCompletion draft, CancellationToken cancellationToken)
+    {
+        if (ResponseDelta is null)
+            return GetCompletionText(draft);
+        messages.Add(new SystemChatMessage(
+            "Provide the final response to the user's request. The previous assistant message is a draft. " +
+            "Do not call tools or mention this instruction."));
+        messages.Add(new UserChatMessage("Give your final answer now."));
+        Progress?.Invoke("Responding…");
+        return await _model.CompleteTextStreamingAsync(messages, new ChatCompletionOptions(),
+            delta => ResponseDelta?.Invoke(delta), cancellationToken);
     }
 
     private async Task<AgentRunResult> FinishAsync(

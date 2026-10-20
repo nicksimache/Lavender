@@ -14,6 +14,73 @@ void Check(bool condition, string name)
 }
 try
 {
+    var defaults = new AgentSettings();
+    defaults.Validate();
+    Check(defaults.Model == "gpt-6-sol" &&
+        defaults.Models.Any(model => model.Id == "gpt-6-luna") &&
+        defaults.Models.Any(model => model.Id == "gpt-6-astra"),
+        "GPT-6 Sol is the startup default and GPT-6 models are available");
+    Check(defaults.Models.Any(model => model.Id == defaults.Model),
+        "startup model is present in model choices");
+    string configPath = Path.Combine(temp, "models.json");
+    File.WriteAllText(configPath, """
+        {"Agent":{"Model":"gpt-5","Models":[{"Label":"My GPT-5","Id":"gpt-5","ApiKeyEnvironmentVariable":"TEST_GPT5_KEY","ReasoningEffort":"low"}]}}
+        """);
+    var configured = AgentSettings.Load(configPath);
+    configured.Validate();
+    Check(configured.Models.Single().ApiKeyEnvironmentVariable == "TEST_GPT5_KEY" &&
+        configured.Models.Single().ReasoningEffort == ReasoningEffort.Low, "model configuration preserves credential routing and typed reasoning");
+    var gpt5 = configured.Models.Single();
+    Check(gpt5.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[]
+        { null, ReasoningEffort.Minimal, ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High }),
+        "GPT-5 slider offers model default and supported effort levels");
+    gpt5.ReasoningEffort = ReasoningEffort.High;
+    gpt5.ValidateReasoning();
+    var gpt4 = defaults.Models.First(model => model.Id == "gpt-4.1-mini");
+    Check(gpt4.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[] { null }) && gpt4.ReasoningEffort is null,
+        "GPT-4 omits reasoning rather than sending none");
+    Check(gpt5.ReasoningEffort == ReasoningEffort.High, "editing one model preserves its independent selection");
+    var sol = new AgentModelOption { Id = "gpt-6-sol", Label = "GPT-6 Sol", ReasoningEffort = ReasoningEffort.None };
+    sol.ValidateReasoning();
+    Check(sol.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[] { ReasoningEffort.None }),
+        "GPT-6 Sol tool flow only permits explicit none");
+    foreach (var invalid in new[] { ReasoningEffort.None, ReasoningEffort.XHigh, (ReasoningEffort)999 })
+    {
+        bool effortRejected = false;
+        gpt5.ReasoningEffort = invalid;
+        try { gpt5.ValidateReasoning(); } catch (InvalidOperationException) { effortRejected = true; }
+        Check(effortRejected, $"GPT-5 rejects unsupported effort {invalid}");
+    }
+    foreach (string value in new[] { "123", "\"ultra\"", "\"1\"" })
+    {
+        File.WriteAllText(configPath, "{\"Agent\":{\"Models\":[{\"ReasoningEffort\":" + value + "}]}}");
+        bool enumRejected = false;
+        try { AgentSettings.Load(configPath); } catch (System.Text.Json.JsonException) { enumRejected = true; }
+        Check(enumRejected, $"configuration rejects unknown or numeric enum value {value}");
+    }
+    Check(new AgentModelOption { Id = "gpt-6-astra" }.ToolCompatibilityError is not null,
+        "Astra tool incompatibility is explicit");
+    foreach (ReasoningEffort effort in Enum.GetValues<ReasoningEffort>())
+    {
+        string json = System.Text.Json.JsonSerializer.Serialize(effort);
+        Check(json == $"\"{effort.ToString().ToLowerInvariant()}\"" &&
+            System.Text.Json.JsonSerializer.Deserialize<ReasoningEffort>(json) == effort,
+            $"{effort} serializes as a readable API value and round trips");
+    }
+    File.WriteAllText(configPath, """
+        {"Agent":{"Model":"gpt-5","Models":[{"Label":"GPT-5","Id":"gpt-5","ReasoningEffort":null}]}}
+        """);
+    var defaultReasoning = AgentSettings.Load(configPath);
+    defaultReasoning.Validate();
+    Check(defaultReasoning.Models.Single().ReasoningEffort is null, "explicit null preserves model default");
+    bool invalidDefaultRejected = false;
+    try { new AgentSettings { Model = "missing" }.Validate(); }
+    catch (InvalidOperationException) { invalidDefaultRejected = true; }
+    Check(invalidDefaultRejected, "unknown startup model rejected");
+    bool duplicateRejected = false;
+    try { new AgentSettings { Models = [defaults.Models[0], defaults.Models[0]] }.Validate(); }
+    catch (InvalidOperationException) { duplicateRejected = true; }
+    Check(duplicateRejected, "duplicate model IDs rejected");
     string? previousReportDirectory = Environment.GetEnvironmentVariable("LAVENDER_INDEX_REPORT_DIRECTORY");
     try
     {

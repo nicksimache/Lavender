@@ -8,12 +8,12 @@ C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\obj\Debug\net8.0-windows\
 Lavender
 none
 false
-TRACE;DEBUG;NET;NET8_0;NETCOREAPP
+TRACE;DEBUG;NET;NET8_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\src\Lavender.App\App.xaml
 21835153250
 231827369862
-51254426136
-253951050097
+521427326391
+253969085030
 src\Lavender.App\Assets\Images\ExplorerIcons.xaml;src\Lavender.App\MainWindow.xaml;
 
 False

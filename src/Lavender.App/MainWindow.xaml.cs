@@ -8,10 +8,13 @@ using Lavender.Infrastructure.Mcp;
 using Lavender.Infrastructure.Retrieval;
 using Microsoft.Win32;
 using System.IO;
+using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Lavender.App
 {
@@ -56,6 +59,19 @@ namespace Lavender.App
 
         // Chat services and operation state.
         private readonly AgentRunner _agentRunner;
+        // Adjust this interval to change the visible reply speed (24 ms per character).
+        private const int ReplyCharacterIntervalMs = 24;
+        private readonly DispatcherTimer _replyRevealTimer = new()
+        {
+            Interval = TimeSpan.FromMilliseconds(ReplyCharacterIntervalMs)
+        };
+        private readonly StringBuilder _pendingReply = new();
+        private readonly StringBuilder _visibleReply = new();
+        private TaskCompletionSource<bool>? _replyDrained;
+        private bool _replyStreamComplete;
+        private TextBlock? _streamingReplyText;
+        private readonly OpenAIService _model;
+        private bool _updatingReasoning;
         private readonly JsonConversationStore _conversations;
         private bool _busy;
         private bool _refreshingHistory;
@@ -79,6 +95,8 @@ namespace Lavender.App
         public MainWindow()
         {
             InitializeComponent();
+            ChatMessagesPanel.SizeChanged += (_, _) => ResizeUserMessages();
+            _replyRevealTimer.Tick += RevealNextReplyCharacter;
             ConfigureCodeEditor();
             _editorAssistance = new EditorAssistance(
                 FilePreviewBox,
@@ -97,14 +115,23 @@ namespace Lavender.App
             settings.Validate();
             _mcpClient = new LavenderMcpClient(FindRepositoryRoot());
             _conversations = new(settings.HistoryDirectory, settings.PersistHistory);
-            OpenAIService model = new(settings.Model);
-            _agentRunner = new AgentRunner(settings, model, _mcpClient, _conversations);
+            _model = new(settings.Models.First(model => model.Id == settings.Model));
+            ModelPicker.ItemsSource = settings.Models;
+            ModelPicker.SelectedValue = settings.Model;
+            _agentRunner = new AgentRunner(settings, _model, _mcpClient, _conversations);
 
             _agentRunner.Progress += status => Dispatcher.InvokeAsync(() =>
             {
                 AgentStatusText.Text = status;
                 AppendAgentActivity(status);
             });
+            _agentRunner.ResponseDelta += delta =>
+            {
+                if (Dispatcher.CheckAccess())
+                    AppendResponseDelta(delta);
+                else
+                    Dispatcher.Invoke(() => AppendResponseDelta(delta));
+            };
             _agentRunner.ToolCompleted += record => Dispatcher.InvokeAsync(() => AppendToolActivity(record));
 
             Loaded += MainWindow_Loaded;
@@ -363,6 +390,7 @@ namespace Lavender.App
             _activeConversationId = Guid.Empty;
             ChatMessagesPanel.Children.Clear();
             contextFiles.Clear();
+            UpdateContextDisplay();
             await RestoreProjectChatAsync();
             if (preferenceError is not null)
                 AddMessageBubble($"Project opened, but its startup preference could not be saved: {preferenceError}", false);
@@ -372,7 +400,22 @@ namespace Lavender.App
         {
             _busy = busy;
             SendButton.IsEnabled = !busy || _activeRun is not null;
-            SendButton.Content = _activeRun is not null ? "Stop" : "Send";
+            SendButton.Content = _activeRun is not null
+                ? new System.Windows.Shapes.Rectangle { Width = 11, Height = 11, RadiusX = 2, RadiusY = 2, Fill = Brushes.White }
+                : new System.Windows.Shapes.Path
+                {
+                    Data = Geometry.Parse("M 2,12 L 10,4 L 18,12 M 10,4 L 10,20"),
+                    Width = 15, Height = 15, Stretch = Stretch.Uniform,
+                    Stroke = Brushes.White, StrokeThickness = 1.8,
+                    StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+                    StrokeLineJoin = PenLineJoin.Round
+                };
+            SendButton.ToolTip = _activeRun is not null ? "Stop response" : "Send message (Enter)";
+            System.Windows.Automation.AutomationProperties.SetName(SendButton,
+                _activeRun is not null ? "Stop response" : "Send message");
+            ModelPicker.IsEnabled = !busy;
+            RefreshReasoningControl();
+            AttachFilesButton.IsEnabled = !busy;
             ConversationPicker.IsEnabled = !busy;
             NewChatButton.IsEnabled = !busy;
             ClearHistoryButton.IsEnabled = !busy;
@@ -383,6 +426,58 @@ namespace Lavender.App
         #endregion
 
         #region Chat requests and messages
+
+        private void ModelPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            RefreshReasoningControl();
+        }
+
+        private void ModelPicker_DropDownOpened(object sender, EventArgs e)
+        {
+            RefreshReasoningControl();
+        }
+
+        private void RefreshReasoningControl()
+        {
+            if (ModelPicker.SelectedItem is not AgentModelOption model)
+                return;
+            ModelPicker.ApplyTemplate();
+            Slider? slider = ModelPicker.Template.FindName("ReasoningSlider", ModelPicker) as Slider;
+            TextBlock? valueText = ModelPicker.Template.FindName("ReasoningValueText", ModelPicker) as TextBlock;
+            FrameworkElement? control = ModelPicker.Template.FindName("ReasoningControl", ModelPicker) as FrameworkElement;
+            if (slider is null || valueText is null || control is null)
+                return;
+
+            _updatingReasoning = true;
+            try
+            {
+                var levels = model.AllowedReasoningLevels;
+                slider.Maximum = Math.Max(0, levels.Count - 1);
+                slider.Value = Enumerable.Range(0, levels.Count)
+                    .First(index => levels[index] == model.ReasoningEffort);
+                slider.IsEnabled = !_busy && levels.Count > 1;
+                valueText.Text = model.ToolCompatibilityError is not null ? "Unavailable"
+                    : model.Id == "gpt-4.1-mini" ? "Not supported"
+                    : model.ReasoningEffort?.ToString() ?? "Default";
+                slider.ToolTip = model.ReasoningHint;
+                control.ToolTip = model.ReasoningHint;
+                System.Windows.Automation.AutomationProperties.SetHelpText(slider, model.ReasoningHint);
+                System.Windows.Automation.AutomationProperties.SetName(slider,
+                    $"Reasoning effort: {valueText.Text}");
+            }
+            finally { _updatingReasoning = false; }
+        }
+
+        private void ReasoningSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_updatingReasoning || _busy || ModelPicker.SelectedItem is not AgentModelOption model)
+                return;
+            int index = (int)Math.Round(e.NewValue);
+            if (index < 0 || index >= model.AllowedReasoningLevels.Count)
+                return;
+            model.ReasoningEffort = model.AllowedReasoningLevels[index];
+            RefreshReasoningControl();
+        }
 
         /// <summary>
         /// Event handler for when the user sends a request to OpenAI API
@@ -427,10 +522,23 @@ namespace Lavender.App
                 return;
             }
 
+            if (ModelPicker.SelectedItem is AgentModelOption candidate && candidate.ToolCompatibilityError is string error)
+            {
+                AddMessageBubble(error, false);
+                return;
+            }
+
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
+            _streamingReplyText = null;
+            _pendingReply.Clear();
+            _visibleReply.Clear();
+            _replyStreamComplete = false;
+            _replyDrained = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             try
             {
+                if (ModelPicker.SelectedItem is AgentModelOption selectedModel)
+                    _model.SelectModel(selectedModel);
                 _activeRun = new CancellationTokenSource();
                 SetBusy(true);
                 AgentRunResult result = await _agentRunner.RunAsync(_activeConversationId, input, BuildProjectContext(), _activeRun.Token);
@@ -440,7 +548,12 @@ namespace Lavender.App
                     // AddMessageBubble($"Tool error: {diagnostic}", false);
                 }
 
-                AddMessageBubble(result.FinalAnswer, false);
+                _replyStreamComplete = true;
+                if (_pendingReply.Length == 0)
+                    _replyDrained.TrySetResult(true);
+                await _replyDrained.Task.WaitAsync(_activeRun.Token);
+                _streamingReplyText ??= AddAssistantMessage(result.FinalAnswer);
+                AssistantMarkdown.Render(_streamingReplyText, result.FinalAnswer);
                 if (result.ProjectFilesChanged && _selectedProjectPath is not null)
                 {
                     FolderView.Items.Clear();
@@ -470,6 +583,10 @@ namespace Lavender.App
             {
                 _activeRun?.Dispose();
                 _activeRun = null;
+                _replyRevealTimer.Stop();
+                _pendingReply.Clear();
+                _streamingReplyText = null;
+                _replyDrained = null;
                 SetBusy(false);
                 AgentStatusText.Text = _indexing ? "Indexing — chat available" : "Ready";
                 try
@@ -506,20 +623,17 @@ namespace Lavender.App
 
         private void AddMessageBubble(string message, bool isUser)
         {
-            Border bubble = new Border
+            if (!isUser)
             {
-                Background = isUser ? new SolidColorBrush(Color.FromRgb(76, 58, 105)) : new SolidColorBrush(Color.FromRgb(42, 42, 42)),
-                BorderBrush = isUser ? new SolidColorBrush(Color.FromRgb(118, 83, 181)) : new SolidColorBrush(Color.FromRgb(58, 58, 58)),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(11, 8, 11, 8),
-                Margin = isUser ? new Thickness(48, 0, 0, 10) : new Thickness(0, 0, 28, 10),
-            };
+                AddAssistantMessage(message);
+                return;
+            }
+
             TextBox text = new TextBox
             {
                 Text = message,
                 IsReadOnly = true,
-                IsReadOnlyCaretVisible = true,
+                IsReadOnlyCaretVisible = false,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
                 Padding = new Thickness(0),
@@ -528,9 +642,71 @@ namespace Lavender.App
                 FontSize = 12,
                 TextWrapping = TextWrapping.Wrap
             };
+            text.HorizontalAlignment = HorizontalAlignment.Left;
+            Border bubble = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(76, 58, 105)),
+                BorderThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(12),
+                Padding = new Thickness(11, 8, 11, 8),
+                Margin = new Thickness(0, 0, 2, 14),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Tag = "UserMessage"
+            };
+            bubble.MaxWidth = Math.Max(160, ChatMessagesPanel.ActualWidth * 0.7);
             bubble.Child = text;
             ChatMessagesPanel.Children.Add(bubble);
             ChatScrollViewer.ScrollToEnd();
+        }
+
+        private TextBlock AddAssistantMessage(string markdown)
+        {
+            TextBlock text = new()
+            {
+                Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
+                FontFamily = new FontFamily("Bahnschrift"),
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(2, 0, 8, 16)
+            };
+            AssistantMarkdown.Render(text, markdown);
+            ChatMessagesPanel.Children.Add(text);
+            ChatScrollViewer.ScrollToEnd();
+            return text;
+        }
+
+        private void AppendResponseDelta(string delta)
+        {
+            _streamingReplyText ??= AddAssistantMessage("");
+            _pendingReply.Append(delta);
+            if (!_replyRevealTimer.IsEnabled)
+                _replyRevealTimer.Start();
+        }
+
+        private void RevealNextReplyCharacter(object? sender, EventArgs e)
+        {
+            if (_pendingReply.Length > 0 && _streamingReplyText is not null)
+            {
+                string next = StringInfo.GetNextTextElement(_pendingReply.ToString());
+                _pendingReply.Remove(0, next.Length);
+                _visibleReply.Append(next);
+                AssistantMarkdown.Render(_streamingReplyText, _visibleReply.ToString());
+            }
+            ChatScrollViewer.ScrollToEnd();
+            if (_pendingReply.Length == 0)
+            {
+                _replyRevealTimer.Stop();
+                if (_replyStreamComplete)
+                    _replyDrained?.TrySetResult(true);
+            }
+        }
+
+        private void ResizeUserMessages()
+        {
+            double maxWidth = Math.Max(160, ChatMessagesPanel.ActualWidth * 0.7);
+            foreach (Border bubble in ChatMessagesPanel.Children.OfType<Border>()
+                .Where(border => Equals(border.Tag, "UserMessage")))
+                bubble.MaxWidth = maxWidth;
         }
 
         #endregion
@@ -564,7 +740,7 @@ namespace Lavender.App
                     Path.GetFullPath(path).StartsWith(
                         _selectedProjectPath + Path.DirectorySeparatorChar,
                         StringComparison.OrdinalIgnoreCase)));
-            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+            UpdateContextDisplay();
             UserInputBox.Clear();
             ChatMessagesPanel.Children.Clear();
             foreach (ConversationTurn turn in chat.Turns)
@@ -651,7 +827,7 @@ namespace Lavender.App
 
         private async Task SaveContextFilesAsync()
         {
-            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+            UpdateContextDisplay();
             try
             {
                 var chat = await _conversations.LoadAsync(_activeConversationId);
@@ -666,11 +842,43 @@ namespace Lavender.App
             }
         }
 
+        private void UpdateContextDisplay()
+        {
+            ContextFilesRow.Visibility = contextFiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+        }
+
         private async void ClearContext_Click(object sender, RoutedEventArgs e)
         {
             if (!_ready || _busy)
                 return;
             contextFiles.Clear();
+            await SaveContextFilesAsync();
+        }
+
+        private async void AttachFiles_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_ready || _busy)
+                return;
+            if (_selectedProjectPath is null)
+            {
+                AddMessageBubble("Open a project before adding context files.", false);
+                return;
+            }
+            OpenFileDialog dialog = new() { Title = "Add project files to chat", Multiselect = true,
+                InitialDirectory = _selectedProjectPath, Filter = "All files (*.*)|*.*" };
+            if (dialog.ShowDialog(this) != true)
+                return;
+            foreach (string path in dialog.FileNames)
+            {
+                if (Path.GetFullPath(path).StartsWith(_selectedProjectPath + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase) && IsDisplayableExplorerFile(path))
+                {
+                    if (!contextFiles.Contains(path)) contextFiles.Add(path);
+                }
+                else
+                    AddMessageBubble($"Choose a supported source or text file inside the open project: {Path.GetFileName(path)}", false);
+            }
             await SaveContextFilesAsync();
         }
 
@@ -715,7 +923,7 @@ namespace Lavender.App
                 return;
             if (!contextFiles.Contains(path))
                 contextFiles.Add(path);
-            SelectedContextText.Text = $"Context: {contextFiles.Count} file(s)";
+            UpdateContextDisplay();
             await SaveContextFilesAsync();
         }
 
