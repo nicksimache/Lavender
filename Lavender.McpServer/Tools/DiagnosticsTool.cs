@@ -29,7 +29,8 @@ public sealed class DiagnosticsTool
     {
         if (!_state.IsProjectIndexed)
         {
-            await _state.WaitForProjectIndexed();
+            return DiagnosticsToolResult.Failed(_state.NotReadyMessage +
+                " Compiler validation is unavailable until reindexing; repeating this call will not refresh the index.");
         }
 
         try
@@ -48,7 +49,7 @@ public sealed class DiagnosticsTool
                 Message: $"Found {results.Length} diagnostic(s).",
                 Diagnostics: results);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return DiagnosticsToolResult.Failed($"Getting diagnostics failed: {ex.Message}");
         }

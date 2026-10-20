@@ -69,7 +69,7 @@ namespace Lavender.App
         private readonly StringBuilder _visibleReply = new();
         private TaskCompletionSource<bool>? _replyDrained;
         private bool _replyStreamComplete;
-        private TextBlock? _streamingReplyText;
+        private RichTextBox? _streamingReplyText;
         private readonly OpenAIService _model;
         private IReadOnlyList<AgentModelOption> _availableModels = [];
         private AgentModelOption _selectedModel = null!;
@@ -101,7 +101,7 @@ namespace Lavender.App
             ConfigureCodeEditor();
             _editorAssistance = new EditorAssistance(
                 FilePreviewBox,
-                () => _openFiles.ToDictionary(tab => tab.FullPath, tab => tab.Document.Text,
+                () => _openFiles.Where(tab => !tab.IsImage).ToDictionary(tab => tab.FullPath, tab => tab.Document.Text,
                     StringComparer.OrdinalIgnoreCase),
                 AppendAgentActivity,
                 loading =>
@@ -259,7 +259,7 @@ namespace Lavender.App
             try
             {
                 solutionOrProjectPath = ProjectFolderResolver.FindSolution(selectedPath);
-                selectedPath = Path.GetDirectoryName(solutionOrProjectPath)!;
+                // Keep the chosen workspace root, including assets beside a nested project.
             }
             catch (InvalidOperationException err)
             {
@@ -617,6 +617,8 @@ namespace Lavender.App
                     foreach (var tab in _openFiles)
                         tab.ReloadIfClean();
                     _editorAssistance.ReloadProject();
+                    if (_activeFile is { IsImage: true } imageTab)
+                        OpenPreparedFile(imageTab);
                     if (contextFiles.RemoveAll(path => !File.Exists(path)) > 0)
                         await SaveContextFilesAsync();
                 }
@@ -709,16 +711,38 @@ namespace Lavender.App
             ChatScrollViewer.ScrollToEnd();
         }
 
-        private TextBlock AddAssistantMessage(string markdown)
+        private RichTextBox AddAssistantMessage(string markdown)
         {
-            TextBlock text = new()
+            RichTextBox text = new()
             {
+                IsReadOnly = true,
+                IsDocumentEnabled = true,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(0),
+                VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
                 FontFamily = new FontFamily("Bahnschrift"),
                 FontSize = 12,
-                TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(2, 0, 8, 16)
             };
+            text.Document.PagePadding = new Thickness(0);
+            ContextMenu menu = new();
+            menu.Items.Add(new MenuItem { Header = "Copy selected text",
+                Command = ApplicationCommands.Copy, CommandTarget = text });
+            MenuItem copyAll = new() { Header = "Copy entire response" };
+            copyAll.Click += (_, _) =>
+            {
+                if (text.Tag is string response && response.Length > 0)
+                {
+                    try { Clipboard.SetText(response); }
+                    catch (System.Runtime.InteropServices.ExternalException ex)
+                    { AppendAgentActivity($"Could not copy response: {ex.Message}"); }
+                }
+            };
+            menu.Items.Add(copyAll);
+            text.ContextMenu = menu;
             AssistantMarkdown.Render(text, markdown);
             ChatMessagesPanel.Children.Add(text);
             ChatScrollViewer.ScrollToEnd();
@@ -1039,7 +1063,7 @@ namespace Lavender.App
 
             string extension = Path.GetExtension(filePath);
             string fileName = Path.GetFileName(filePath);
-            return ExplorerFileExtensions.Contains(extension) || ExplorerFileNames.Contains(fileName);
+            return ImageAssets.IsImage(filePath) || ExplorerFileExtensions.Contains(extension) || ExplorerFileNames.Contains(fileName);
         }
 
         private static IEnumerable<string> SafeEnumerateDirectories(string directoryPath)
@@ -1125,6 +1149,33 @@ namespace Lavender.App
 
         #region Editor tabs, saving, and highlighting
 
+        private void AgentEditorSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
+        {
+            ResizeAgentEditor(e.HorizontalChange);
+            e.Handled = true;
+        }
+
+        private void AgentEditorSplitter_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key is not (Key.Left or Key.Right))
+                return;
+            ResizeAgentEditor(e.Key == Key.Left ? -10 : 10);
+            e.Handled = true;
+        }
+
+        private void ResizeAgentEditor(double delta)
+        {
+            var agent = WorkspacePanels.ColumnDefinitions[2];
+            var editor = WorkspacePanels.ColumnDefinitions[4];
+            double total = agent.ActualWidth + editor.ActualWidth;
+            if (total <= agent.MinWidth + editor.MinWidth)
+                return;
+            double width = Math.Clamp(agent.ActualWidth + delta, agent.MinWidth, total - editor.MinWidth);
+            // Preserve proportional resizing when the window itself changes size.
+            agent.Width = new GridLength(width, GridUnitType.Star);
+            editor.Width = new GridLength(total - width, GridUnitType.Star);
+        }
+
         /// <summary>Configures editor appearance and the window-level save shortcut.</summary>
         private void ConfigureCodeEditor()
         {
@@ -1163,12 +1214,30 @@ namespace Lavender.App
         private async void OpenPreparedFile(OpenFileTab tab)
         {
             _openFileRequest?.Cancel();
-            if (ReferenceEquals(tab, _activeFile))
+            if (ReferenceEquals(tab, _activeFile) && !tab.IsImage)
                 return;
             using var request = CancellationTokenSource.CreateLinkedTokenSource(_windowLifetime.Token);
             _openFileRequest = request;
             try
             {
+                if (tab.IsImage)
+                {
+                    ImageSource? image = null;
+                    string description;
+                    try
+                    {
+                        (image, description) = await Task.Run(() => ImageAssets.Load(tab.FullPath), request.Token);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        description = $"Could not preview {tab.FileName}: {ex.Message}";
+                    }
+                    request.Token.ThrowIfCancellationRequested();
+                    ActivatePreparedFile(tab, []);
+                    AssetPreviewImage.Source = image;
+                    ImagePreviewStatus.Text = description;
+                    return;
+                }
                 string? project = _selectedSolutionPath;
                 Microsoft.CodeAnalysis.Classification.ClassifiedSpan[] spans;
                 while (true)
@@ -1205,7 +1274,7 @@ namespace Lavender.App
         /// <summary>Atomically switches the selected tab, document, and prepared highlighting while restoring its view.</summary>
         private void ActivatePreparedFile(OpenFileTab tab, Microsoft.CodeAnalysis.Classification.ClassifiedSpan[] spans)
         {
-            if (_activeFile != null)
+            if (_activeFile is { IsImage: false })
             {
                 _activeFile.CaretOffset = FilePreviewBox.CaretOffset;
                 _activeFile.VerticalOffset = FilePreviewBox.VerticalOffset;
@@ -1222,9 +1291,12 @@ namespace Lavender.App
             }
             finally { _settingFileSelection = false; }
             currSelectedFile = tab.FullPath;
+            FilePreviewBox.Visibility = tab.IsImage ? Visibility.Collapsed : Visibility.Visible;
+            ImagePreviewPanel.Visibility = tab.IsImage ? Visibility.Visible : Visibility.Collapsed;
+            AssetPreviewImage.Source = null;
             FilePreviewBox.Document = tab.Document;
             FilePreviewBox.Encoding = tab.Encoding;
-            _editorAssistance.SelectFile(_selectedSolutionPath, tab.FullPath, preparedSpans: spans);
+            _editorAssistance.SelectFile(_selectedSolutionPath, tab.IsImage ? null : tab.FullPath, preparedSpans: spans);
             FilePreviewBox.CaretOffset = Math.Min(tab.CaretOffset, tab.Document.TextLength);
             FilePreviewBox.ScrollToVerticalOffset(tab.VerticalOffset);
             FilePreviewBox.ScrollToHorizontalOffset(tab.HorizontalOffset);
@@ -1236,7 +1308,7 @@ namespace Lavender.App
 
         private void SaveFile_CanExecute(object sender, CanExecuteRoutedEventArgs e)
         {
-            e.CanExecute = FilePreviewBox != null && currSelectedFile != null && File.Exists(currSelectedFile);
+            e.CanExecute = _activeFile is { IsImage: false } && currSelectedFile != null && File.Exists(currSelectedFile);
             e.Handled = true;
         }
 
@@ -1248,7 +1320,7 @@ namespace Lavender.App
 
         private void SaveCurrentFile()
         {
-            if (currSelectedFile == null || !File.Exists(currSelectedFile))
+            if (_activeFile is not { IsImage: false } || currSelectedFile == null || !File.Exists(currSelectedFile))
                 return;
             try
             {

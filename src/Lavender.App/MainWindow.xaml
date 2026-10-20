@@ -468,7 +468,11 @@
                              ScrollViewer.VerticalScrollBarVisibility="Disabled">
                         <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
                         <ListBox.ItemTemplate><DataTemplate>
-                            <TextBlock Text="{Binding Header}" ToolTip="{Binding FullPath}" Margin="10,5" Foreground="#D4D4D4"/>
+                            <StackPanel Orientation="Horizontal" ToolTip="{Binding FullPath}" Margin="10,5">
+                                <Image Width="16" Height="16" Margin="0,0,6,0"
+                                       Source="{Binding FullPath, Converter={x:Static converters:HeaderToImageConverter.Instance}}"/>
+                                <TextBlock Text="{Binding Header}" Foreground="#D4D4D4"/>
+                            </StackPanel>
                         </DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
                 </Border>
@@ -486,6 +490,28 @@
                                    WordWrap="False"
                                    VerticalScrollBarVisibility="Auto"
                                    HorizontalScrollBarVisibility="Auto"/>
+                <Grid x:Name="ImagePreviewPanel" Grid.Row="1" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Border Margin="16" ClipToBounds="True">
+                        <Border.Background>
+                            <DrawingBrush TileMode="Tile" Viewport="0,0,20,20" ViewportUnits="Absolute">
+                                <DrawingBrush.Drawing>
+                                    <DrawingGroup>
+                                        <GeometryDrawing Brush="#252525" Geometry="M0,0 H20 V20 H0 Z"/>
+                                        <GeometryDrawing Brush="#303030" Geometry="M0,0 H10 V10 H0 Z M10,10 H20 V20 H10 Z"/>
+                                    </DrawingGroup>
+                                </DrawingBrush.Drawing>
+                            </DrawingBrush>
+                        </Border.Background>
+                        <Image x:Name="AssetPreviewImage" Stretch="Uniform" StretchDirection="DownOnly"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor" Margin="8"/>
+                    </Border>
+                    <TextBlock x:Name="ImagePreviewStatus" Grid.Row="1" Margin="16,0,16,14"
+                               Foreground="#BBBBBB" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+                </Grid>
                 <Border x:Name="EditorLoadingOverlay" Grid.Row="1"
                         Background="{StaticResource EditorBackground}"
                         Visibility="Collapsed">
@@ -684,9 +710,32 @@
             <GridSplitter Grid.Column="1" Style="{StaticResource WorkspaceSplitter}"
                           ToolTip="Drag to resize explorer and agent"
                           AutomationProperties.Name="Resize explorer and agent"/>
-            <GridSplitter Grid.Column="3" Style="{StaticResource WorkspaceSplitter}"
-                          ToolTip="Drag to resize agent and code editor"
-                          AutomationProperties.Name="Resize agent and code editor"/>
+            <Thumb Grid.Column="3" Cursor="SizeWE" Focusable="True"
+                   DragDelta="AgentEditorSplitter_DragDelta"
+                   KeyDown="AgentEditorSplitter_KeyDown"
+                   ToolTip="Drag to resize agent and code editor"
+                   AutomationProperties.Name="Resize agent and code editor">
+                <Thumb.Style>
+                    <Style TargetType="Thumb">
+                        <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border Background="{TemplateBinding Background}"/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Thumb.Style>
+            </Thumb>
         </Grid>
 
         <!-- Status bar -->

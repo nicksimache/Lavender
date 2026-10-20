@@ -91,8 +91,9 @@ public sealed class LavenderMcpClient : IAsyncDisposable
         await EnsureConnectedAsync(cancellationToken);
         _tools = await _client!.ListToolsAsync(cancellationToken: cancellationToken);
 
-        // Indexing is a desktop lifecycle operation, never an agent capability.
-        return _tools.Where(tool => tool.Name != "lavender_index_project").Select(tool => new McpToolDefinition(
+        // Indexing belongs to the desktop. Prefer the range-aware, hash-bearing reader
+        // over the compatibility whole-file reader to avoid duplicate large snapshots.
+        return _tools.Where(tool => tool.Name is not ("lavender_index_project" or "lavender_read_source_file")).Select(tool => new McpToolDefinition(
             tool.Name,
             tool.Description ?? string.Empty,
             BinaryData.FromString(tool.JsonSchema.GetRawText())))

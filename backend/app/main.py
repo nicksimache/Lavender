@@ -1,3 +1,8 @@
+import contextvars
+from contextlib import contextmanager
+from datetime import datetime, timezone
+import logging
+import httpx
 import hashlib
 import json
 import re
@@ -15,7 +20,68 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 
 app = FastAPI()
-client = OpenAI()
+api_context = contextvars.ContextVar("api_context", default={})
+api_log_lock = threading.Lock()
+
+
+def log_api(data):
+    try:
+        directory = Path(os.environ.get("LAVENDER_API_LOG_DIRECTORY") or
+                         Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Lavender" / "ApiUsage")
+        now = datetime.now(timezone.utc)
+        record = dict(timestamp=now.isoformat(), process_id=os.getpid(),
+                      context=api_context.get(), data=data)
+        with api_log_lock:
+            directory.mkdir(parents=True, exist_ok=True)
+            with (directory / f"backend-{now:%Y-%m-%d}-{os.getpid()}.jsonl").open("a", encoding="utf-8") as output:
+                output.write(json.dumps(record) + "\n")
+    except OSError:
+        logging.exception("API usage logging failed")
+
+
+@contextmanager
+def track_api(**context):
+    token = api_context.set(context)
+    try:
+        yield
+    finally:
+        api_context.reset(token)
+
+
+class TrackingTransport(httpx.BaseTransport):
+    def __init__(self, inner=None):
+        self.inner = inner or httpx.HTTPTransport()
+
+    def handle_request(self, request):
+        request_id = uuid.uuid4().hex
+        started = time.perf_counter()
+        log_api(dict(event_type="request", request_id=request_id,
+                     endpoint=str(request.url.copy_with(query=None)), method=request.method,
+                     request_body=request.read().decode("utf-8")))
+        try:
+            response = self.inner.handle_request(request)
+            response.read()
+            try:
+                body = response.json()
+            except ValueError:
+                body = {}
+            log_api(dict(event_type="response", request_id=request_id,
+                         status_code=response.status_code,
+                         duration_ms=(time.perf_counter() - started) * 1000,
+                         provider_request_id=response.headers.get("x-request-id"),
+                         usage=body.get("usage")))
+            return response
+        except Exception as exc:
+            log_api(dict(event_type="error", request_id=request_id,
+                         duration_ms=(time.perf_counter() - started) * 1000,
+                         error_type=type(exc).__name__))
+            raise
+
+    def close(self):
+        self.inner.close()
+
+
+client = OpenAI(http_client=httpx.Client(transport=TrackingTransport(), timeout=600))
 
 db = lancedb.connect("./lavender_vectors")
 TABLE_NAME = "code_chunks"
@@ -268,7 +334,11 @@ def embed_project(request: EmbedProjectRequest):
             api_started = time.perf_counter()
             timings["embedding_requests"] += 1
             try:
-                vectors = get_embeddings([pending[key][0]["embedding_text"] for key in batch])
+                with track_api(trigger="project_index", tool="lavender_index_project",
+                               project_path=request.project_path, index_id=request.index_id,
+                               batch_number=offset // BATCH_SIZE + 1,
+                               sources=embedding_failure_context(Exception(), batch, pending)["batch_inputs"]):
+                    vectors = get_embeddings([pending[key][0]["embedding_text"] for key in batch])
             except Exception as exc:
                 timings["embedding_failure"] = embedding_failure_context(exc, batch, pending)
                 raise
@@ -350,7 +420,10 @@ def search(request: SearchRequest):
         if request.index_id == "legacy" and request.index_id not in sessions:
             db.open_table(name)
         stage = "creating the query embedding"
-        query_vector = get_embedding(request.query)
+        with track_api(trigger="semantic_search", tool="lavender_semantic_search",
+                       project_path=request.project_path, index_id=request.index_id,
+                       query=request.query):
+            query_vector = get_embedding(request.query)
 
         stage = "searching the vector index"
         deadline = time.monotonic() + request.wait_seconds

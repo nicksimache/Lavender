@@ -14,8 +14,9 @@ public sealed class OpenFileTab : INotifyPropertyChanged
     public string FileName => Path.GetFileName(FullPath);
     public TextDocument Document { get; }
     public Encoding Encoding { get; }
+    public bool IsImage => Rendering.ImageAssets.IsImage(FullPath);
 
-    public bool IsDirty => Document.Text != _savedText;
+    public bool IsDirty => !IsImage && Document.Text != _savedText;
     public bool IsSaved => !IsDirty;
     public string Header => FileName + (IsDirty ? " *" : "");
 
@@ -29,6 +30,13 @@ public sealed class OpenFileTab : INotifyPropertyChanged
     public OpenFileTab(string path)
     {
         FullPath = Path.GetFullPath(path);
+        if (IsImage)
+        {
+            _savedText = "";
+            Encoding = new UTF8Encoding(false);
+            Document = new TextDocument();
+            return;
+        }
 
         using var reader = new StreamReader(FullPath, new UTF8Encoding(false), true);
         _savedText = reader.ReadToEnd();
@@ -49,7 +57,7 @@ public sealed class OpenFileTab : INotifyPropertyChanged
     public void ReloadIfClean()
     {
         // Agent edits can refresh saved tabs, but must never overwrite unsaved editor changes.
-        if(IsDirty || !File.Exists(FullPath))
+        if(IsImage || IsDirty || !File.Exists(FullPath))
         {
             return;
         }

@@ -2,6 +2,8 @@ using Lavender.Infrastructure.Mcp;
 using Lavender.Application.Agent;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.ClientModel.Primitives;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json.Nodes;
 
@@ -9,6 +11,7 @@ namespace Lavender.Infrastructure.AI;
 
 public sealed class OpenAIService
 {
+    private static readonly HttpClient TrackedHttpClient = new(new ApiTrackingHandler(new HttpClientHandler())) { Timeout = TimeSpan.FromMinutes(10) };
     private ChatClient? _client;
     private AgentModelOption _model;
     private readonly ResponsesApiClient _responses = new();
@@ -52,6 +55,7 @@ public sealed class OpenAIService
         ChatCompletionOptions options,
         CancellationToken cancellationToken = default)
     {
+        using var tracking = ApiUsageTracker.BeginCall();
         ChatClient client = GetClient();
         ConfigureReasoning(options);
         ClientResult<ChatCompletion> result = await client.CompleteChatAsync(
@@ -65,19 +69,37 @@ public sealed class OpenAIService
         Action<string> onText,
         CancellationToken cancellationToken = default)
     {
+        using var tracking = ApiUsageTracker.BeginCall();
         ChatClient client = GetClient();
         ConfigureReasoning(options);
         StringBuilder answer = new();
-        await foreach (StreamingChatCompletionUpdate update in
-            client.CompleteChatStreamingAsync(messages, options, cancellationToken))
+        string streamId = Guid.NewGuid().ToString("N");
+        ChatTokenUsage? usage = null;
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        try
         {
-            foreach (ChatMessageContentPart part in update.ContentUpdate)
+            await foreach (StreamingChatCompletionUpdate update in
+                client.CompleteChatStreamingAsync(messages, options, cancellationToken))
             {
-                if (string.IsNullOrEmpty(part.Text))
-                    continue;
-                answer.Append(part.Text);
-                onText(part.Text);
+                if (update.Usage is not null) usage = update.Usage;
+                foreach (ChatMessageContentPart part in update.ContentUpdate)
+                {
+                    if (string.IsNullOrEmpty(part.Text))
+                        continue;
+                    answer.Append(part.Text);
+                    onText(part.Text);
+                }
             }
+        }
+        finally
+        {
+            ApiUsageTracker.Write(new { event_type = "stream_usage", stream_id = streamId,
+                model = _model.Id, duration_ms = timer.Elapsed.TotalMilliseconds,
+                usage = usage is null ? null : new {
+                    input_tokens = usage.InputTokenCount, output_tokens = usage.OutputTokenCount,
+                    total_tokens = usage.TotalTokenCount,
+                    cached_tokens = usage.InputTokenDetails?.CachedTokenCount,
+                    reasoning_tokens = usage.OutputTokenDetails?.ReasoningTokenCount } });
         }
         if (answer.Length > 0)
             return answer.ToString();
@@ -93,7 +115,7 @@ public sealed class OpenAIService
             string? apiKey = Environment.GetEnvironmentVariable(_model.ApiKeyEnvironmentVariable);
             if (string.IsNullOrWhiteSpace(apiKey))
                 throw new InvalidOperationException($"Set {_model.ApiKeyEnvironmentVariable} and restart Lavender to use {_model.Label}.");
-            _client = new ChatClient(_model.Id, apiKey);
+            _client = new ChatClient(_model.Id, new ApiKeyCredential(apiKey), new OpenAI.OpenAIClientOptions { Transport = new HttpClientPipelineTransport(TrackedHttpClient) });
         }
         return _client;
     }

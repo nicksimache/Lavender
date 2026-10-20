@@ -16,7 +16,7 @@ public sealed record ResponseTurn(
 /// <summary>Stateless Responses requests for reasoning models with function tools.</summary>
 public sealed class ResponsesApiClient
 {
-    private static readonly HttpClient SharedHttpClient = new()
+    private static readonly HttpClient SharedHttpClient = new(new ApiTrackingHandler(new HttpClientHandler()))
     {
         Timeout = TimeSpan.FromMinutes(10)
     };
@@ -32,6 +32,7 @@ public sealed class ResponsesApiClient
         string instructions,
         CancellationToken cancellationToken = default)
     {
+        using var tracking = ApiUsageTracker.BeginCall();
         model.ValidateReasoning();
         string? apiKey = Environment.GetEnvironmentVariable(model.ApiKeyEnvironmentVariable);
         if (string.IsNullOrWhiteSpace(apiKey))

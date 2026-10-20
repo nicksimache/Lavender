@@ -23,6 +23,7 @@ public sealed class LavenderMcpState : IDisposable
         : "No project is indexed. Open a project first.";
 
     public string? ProjectPath { get; private set; }
+    public AssetCatalog? Assets { get; private set; }
     public string? SolutionPath { get; private set; }
     public IProjectKnowledgeService? KnowledgeService => RequiresReindex ? null : _projectIndexer.KnowledgeService;
     public string? TimingSummary => _projectIndexer.LastTimings?.Summary();
@@ -39,6 +40,7 @@ public sealed class LavenderMcpState : IDisposable
             IsIndexing = true;
             IndexingError = null;
             ProjectPath = Path.GetFullPath(projectPath);
+            Assets = new AssetCatalog(ProjectPath);
             SolutionPath = Path.GetFullPath(solutionPath);
             IndexId = Guid.NewGuid().ToString("N");
             RequiresReindex = false;

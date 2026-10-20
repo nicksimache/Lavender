@@ -6,14 +6,14 @@ namespace Lavender.Application.Agent;
 
 public sealed class AgentSettings
 {
-    public string Model { get; init; } = "gpt-6-sol";
+    public string Model { get; init; } = "gpt-6-luna";
     public List<AgentModelOption> Models { get; init; } =
     [
         new() { Label = "GPT-4.1 mini", Id = "gpt-4.1-mini" },
         new() { Label = "GPT-5", Id = "gpt-5" },
         new() { Label = "GPT-6 Sol", Id = "gpt-6-sol", ReasoningEffort = ReasoningEffort.None },
         new() { Label = "GPT-6.1 Sol", Id = "gpt-6.1-sol" },
-        new() { Label = "GPT-6 Luna", Id = "gpt-6-luna", ReasoningEffort = ReasoningEffort.None },
+        new() { Label = "GPT-6 Luna", Id = "gpt-6-luna", ReasoningEffort = ReasoningEffort.Medium },
         new() { Label = "GPT-6 Astra", Id = "gpt-6-astra" },
     ];
     public int MaxIterations { get; init; } = 100;

@@ -16,6 +16,22 @@ internal static class AssistantMarkdown
 
     private static readonly Regex OrderedList = new(@"^\d+[.)]\s+", RegexOptions.Compiled);
 
+    public static void Render(RichTextBox box, string markdown)
+    {
+        // Reuse the same inline renderer while allowing native text selection and Ctrl+C.
+        TextBlock source = new();
+        Render(source, markdown);
+        Paragraph paragraph = new() { Margin = new Thickness(0) };
+        while (source.Inlines.FirstInline is Inline inline)
+        {
+            source.Inlines.Remove(inline);
+            paragraph.Inlines.Add(inline);
+        }
+        box.Document.Blocks.Clear();
+        box.Document.Blocks.Add(paragraph);
+        box.Tag = markdown;
+    }
+
     public static void Render(TextBlock block, string markdown)
     {
         block.Inlines.Clear();

@@ -7,11 +7,15 @@ using System.Text.Json.Nodes;
 
 const string keyName = "LAVENDER_RESPONSES_PROBE_KEY";
 Environment.SetEnvironmentVariable(keyName, "fixture-key");
+string logDirectory = Path.Combine(Path.GetTempPath(), "lavender-api-probe-" + Guid.NewGuid().ToString("N"));
+string? previousLogDirectory = Environment.GetEnvironmentVariable("LAVENDER_API_LOG_DIRECTORY");
+Environment.SetEnvironmentVariable("LAVENDER_API_LOG_DIRECTORY", logDirectory);
 try
 {
+    using var tracking = ApiUsageTracker.Scope(new { trigger = "fixture", tool = "read_file" });
     FixtureHandler handler = new();
     handler.Replies.Enqueue("""
-        {"status":"completed","output":[
+        {"usage":{"input_tokens":12,"output_tokens":3,"total_tokens":15},"status":"completed","output":[
           {"id":"rs_1","type":"reasoning","encrypted_content":"opaque-reasoning"},
           {"id":"fc_1","type":"function_call","call_id":"call_1","name":"read_file","arguments":"{\"path\":\"a.cs\"}"}
         ]}
@@ -21,7 +25,7 @@ try
           {"type":"message","role":"assistant","content":[{"type":"output_text","text":"Done."}]}
         ]}
         """);
-    using HttpClient http = new(handler);
+    using HttpClient http = new(new ApiTrackingHandler(handler));
     ResponsesApiClient client = new(http);
     AgentModelOption model = new()
     {
@@ -55,11 +59,19 @@ try
           secondRequest["input"]![3]!["type"]!.GetValue<string>() == "function_call_output" &&
           secondRequest["tools"] is null,
         "reasoning item and tool result replayed without further tools");
+    string audit = string.Join("\n", Directory.GetFiles(logDirectory).Select(File.ReadAllText));
+    var events = audit.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => JsonNode.Parse(line)!).ToArray();
+    Check(events.Length == 4, "one start/end pair per request");
+    Check(events[0]["data"]!["request_body"]!.GetValue<string>() == handler.Requests[0], "exact wire payload recorded");
+    Check(events[1]["data"]!["usage"]!["total_tokens"]!.GetValue<int>() == 15, "provider usage preserved");
+    Check(events[0]["logical_call_id"]!.ToString() == events[1]["logical_call_id"]!.ToString(), "request correlation preserved");
+    Check(events[0]["context"]!["tool"]!.GetValue<string>() == "read_file" && !audit.Contains("fixture-key"), "trigger recorded without credentials");
     Console.WriteLine("Responses API fixture: reasoning, tools, stateless replay, and final text passed.");
 }
 finally
 {
     Environment.SetEnvironmentVariable(keyName, null);
+    Environment.SetEnvironmentVariable("LAVENDER_API_LOG_DIRECTORY", previousLogDirectory);
 }
 
 if (args.Contains("--live", StringComparer.Ordinal))

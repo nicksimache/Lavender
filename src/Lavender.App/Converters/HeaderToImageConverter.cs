@@ -39,6 +39,8 @@ namespace Lavender.App.Converters
                 return null;
             if (Directory.Exists(path))
                 return Icons["Folder"];
+            if (Rendering.ImageAssets.IsImage(path))
+                return Icons["ImageAsset"];
             return Path.GetExtension(path).ToLowerInvariant() switch
             {
                 ".cs" => CsIcon,
