@@ -83,29 +83,27 @@ public sealed class AgentModelOption
     public string ApiKeyEnvironmentVariable { get; init; } = "OPENAI_API_KEY";
     public ReasoningEffort? ReasoningEffort { get; set; }
 
-    // These are the levels usable by Lavender's current Chat Completions tool flow.
-    // Null means omit the parameter (model default), not reasoning disabled.
+    // Null omits the parameter and uses the model default.
     [JsonIgnore]
     public IReadOnlyList<ReasoningEffort?> AllowedReasoningLevels => Id switch
     {
         "gpt-5" => [null, Effort.Minimal, Effort.Low, Effort.Medium, Effort.High],
-        "gpt-6-sol" or "gpt-6-luna" => [Effort.None],
+        "gpt-6-sol" or "gpt-6-luna" =>
+            [null, Effort.None, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max],
+        "gpt-6-astra" or "gpt-6.1-sol" =>
+            [null, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max],
         _ => [null]
     };
 
     [JsonIgnore]
-    public string? ToolCompatibilityError => Id is "gpt-6-astra" or "gpt-6.1-sol"
-        ? $"{Label} requires the Responses API for tool-enabled chat. Choose GPT-5 or GPT-6 Sol/Luna until that integration is added."
-        : null;
-
-    [JsonIgnore]
-    public string ReasoningHint => ToolCompatibilityError ?? (Id switch
+    public string ReasoningHint => Id switch
     {
         "gpt-5" => "Higher reasoning effort can take longer and use more tokens. Default lets the model decide.",
-        "gpt-6-sol" or "gpt-6-luna" => "Reasoning is fixed at None for the current tool integration. Other levels require the Responses API.",
+        "gpt-6-sol" or "gpt-6-luna" => "Default uses the model's medium effort. None is fastest; higher levels use more time and tokens.",
+        "gpt-6-astra" or "gpt-6.1-sol" => "Default uses the model's reasoning setting. Higher levels use more time and tokens.",
         "gpt-4.1-mini" => "This model does not support adjustable reasoning effort.",
         _ => "Reasoning controls are not configured for this model. The API default is used."
-    });
+    };
 
     public void ValidateReasoning()
     {

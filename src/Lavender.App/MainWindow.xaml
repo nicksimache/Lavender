@@ -620,102 +620,42 @@
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Button>
-                            <ComboBox x:Name="ModelPicker" Grid.Column="1" HorizontalAlignment="Right"
-                                      VerticalAlignment="Center" Margin="4,0,10,0" MaxWidth="210"
-                                      DisplayMemberPath="Label" SelectedValuePath="Id" SelectionChanged="ModelPicker_SelectionChanged"
-                                      DropDownOpened="ModelPicker_DropDownOpened"
-                                      Background="#303030" Foreground="#F0F0F0"
-                                      AutomationProperties.Name="Chat model" ToolTip="Choose the model for your next message">
-                                <ComboBox.Resources>
-                                    <Style TargetType="ComboBoxItem">
-                                        <Setter Property="Foreground" Value="#F0F0F0"/>
-                                        <Setter Property="Background" Value="#303030"/>
-                                        <Setter Property="Padding" Value="10,8"/>
-                                        <Setter Property="Template">
-                                            <Setter.Value>
-                                                <ControlTemplate TargetType="ComboBoxItem">
-                                                    <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="5">
-                                                        <ContentPresenter/>
-                                                    </Border>
-                                                    <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsHighlighted" Value="True">
-                                                            <Setter TargetName="ItemBorder" Property="Background" Value="#494052"/>
-                                                        </Trigger>
-                                                        <Trigger Property="IsSelected" Value="True">
-                                                            <Setter TargetName="ItemBorder" Property="Background" Value="#49385E"/>
-                                                        </Trigger>
-                                                    </ControlTemplate.Triggers>
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </ComboBox.Resources>
-                                <ComboBox.Template>
-                                    <ControlTemplate TargetType="ComboBox">
+                            <Grid Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="4,0,10,0">
+                                <Button x:Name="ModelPicker" Background="Transparent" BorderThickness="0" Padding="8,6"
+                                        Click="ModelPicker_Click" ToolTip="Choose the model for your next message"
+                                        AutomationProperties.Name="Chat model">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <TextBlock x:Name="ModelPickerLabel" Foreground="#F0F0F0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="ModelPickerReasoningLabel" Foreground="#A0A0A0"
+                                                   Margin="6,0,0,0" VerticalAlignment="Center"/>
+                                        <Path Data="M 2,4 L 6,8 L 10,4" Width="9" Height="9"
+                                              Margin="7,0,0,0" Stretch="Uniform" Stroke="#AAAAAA"
+                                              StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                              VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Popup x:Name="ModelMenuPopup" PlacementTarget="{Binding ElementName=ModelPicker}"
+                                       Placement="Top" AllowsTransparency="True" StaysOpen="False"
+                                       PopupAnimation="Fade" Closed="ModelMenuPopup_Closed">
+                                    <Border Background="#303030" BorderBrush="#505050" BorderThickness="1"
+                                            CornerRadius="10" Padding="8" MinWidth="230">
                                         <Grid>
-                                            <ToggleButton Focusable="False" Background="Transparent" BorderThickness="0"
-                                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
-                                                <ToggleButton.Template>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Border x:Name="PickerBorder" Background="Transparent" CornerRadius="8" Padding="8,6">
-                                                            <ContentPresenter/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="PickerBorder" Property="Background" Value="#414141"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </ToggleButton.Template>
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding SelectedItem.Label, RelativeSource={RelativeSource AncestorType=ComboBox}}"
-                                                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ComboBox}}"
-                                                               VerticalAlignment="Center"/>
-                                                    <Path Data="M 2,4 L 6,8 L 10,4" Width="9" Height="9"
-                                                          Margin="7,0,0,0" Stretch="Uniform" Stroke="#AAAAAA"
-                                                          StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </ToggleButton>
-                                            <Popup x:Name="PART_Popup" Placement="Top" AllowsTransparency="True" Focusable="False"
-                                                   IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Fade">
-                                                <Border Background="#303030" BorderBrush="#505050" BorderThickness="1" CornerRadius="10" Padding="8" MinWidth="240">
-                                                    <Grid>
-                                                        <Grid.RowDefinitions>
-                                                            <RowDefinition Height="Auto"/>
-                                                            <RowDefinition Height="Auto"/>
-                                                        </Grid.RowDefinitions>
-                                                        <ScrollViewer MaxHeight="260"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
-                                                        <StackPanel x:Name="ReasoningControl" Grid.Row="1" Margin="5,8,5,2" ToolTipService.ShowOnDisabled="True">
-                                                            <Separator Background="#505050" Margin="0,0,0,8"/>
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                    <ColumnDefinition Width="*"/>
-                                                                    <ColumnDefinition Width="Auto"/>
-                                                                </Grid.ColumnDefinitions>
-                                                                <TextBlock Text="Reasoning" Foreground="#AAAAAA" FontSize="11" VerticalAlignment="Center"/>
-                                                                <Slider x:Name="ReasoningSlider" Grid.Column="1" Margin="8,0" Minimum="0" Maximum="4"
-                                                                        TickFrequency="1" IsSnapToTickEnabled="True" TickPlacement="BottomRight"
-                                                                        SmallChange="1" LargeChange="1" IsMoveToPointEnabled="True" MinHeight="24"
-                                                                        VerticalAlignment="Center" Foreground="{StaticResource AccentBrush}"
-                                                                        AutomationProperties.Name="Reasoning effort" ToolTipService.ShowOnDisabled="True"
-                                                                        ValueChanged="ReasoningSlider_ValueChanged"/>
-                                                                <TextBlock x:Name="ReasoningValueText" Grid.Column="2" Text="Default" MinWidth="72"
-                                                                           TextAlignment="Right" Foreground="#D8D8D8" FontSize="11" VerticalAlignment="Center"/>
-                                                            </Grid>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </Border>
-                                            </Popup>
+                                            <StackPanel x:Name="ModelMenu">
+                                                <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Hidden"
+                                                              HorizontalScrollBarVisibility="Disabled">
+                                                    <StackPanel x:Name="ModelListPanel"/>
+                                                </ScrollViewer>
+                                            </StackPanel>
+                                            <StackPanel x:Name="ReasoningMenu" Visibility="Collapsed">
+                                                <Button Content="‹  Models" Background="Transparent" BorderThickness="0"
+                                                        HorizontalContentAlignment="Left" Click="ReasoningBack_Click"/>
+                                                <Separator Background="#505050" Margin="2,5,2,8"/>
+                                                <StackPanel x:Name="ReasoningListPanel"/>
+                                            </StackPanel>
                                         </Grid>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
-                                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="Foreground" Value="#CBB4F3"/></Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </ComboBox.Template>
-                            </ComboBox>
+                                    </Border>
+                                </Popup>
+                            </Grid>
                             <Button x:Name="SendButton"
                                     Grid.Column="2" Width="34" Height="34" Padding="0"
                                     Background="{StaticResource AccentBrush}" Foreground="White"

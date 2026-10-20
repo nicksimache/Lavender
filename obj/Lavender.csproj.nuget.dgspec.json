@@ -95,6 +95,10 @@
             "OpenAI": {
               "target": "Package",
               "version": "[2.11.0, )"
+            },
+            "WpfMath": {
+              "target": "Package",
+              "version": "[2.1.0, )"
             }
           },
           "imports": [

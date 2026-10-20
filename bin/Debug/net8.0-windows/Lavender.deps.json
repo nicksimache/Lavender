@@ -18,7 +18,8 @@
           "Microsoft.ML.Tokenizers": "2.0.0",
           "Microsoft.ML.Tokenizers.Data.Cl100kBase": "2.0.0",
           "ModelContextProtocol": "1.4.1",
-          "OpenAI": "2.11.0"
+          "OpenAI": "2.11.0",
+          "WpfMath": "2.1.0"
         },
         "runtime": {
           "Lavender.dll": {}
@@ -1020,6 +1021,25 @@
             "fileVersion": "10.0.626.17701"
           }
         }
+      },
+      "WpfMath/2.1.0": {
+        "dependencies": {
+          "XamlMath.Shared": "2.1.0"
+        },
+        "runtime": {
+          "lib/net6.0-windows7.0/WpfMath.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
+      },
+      "XamlMath.Shared/2.1.0": {
+        "runtime": {
+          "lib/net6.0/XamlMath.Shared.dll": {
+            "assemblyVersion": "2.1.0.0",
+            "fileVersion": "2.1.0.0"
+          }
+        }
       }
     }
   },
@@ -1448,6 +1468,20 @@
       "sha512": "sha512-eU/JSsGWpQPE+rkBJjFjsmtaPsu1kCLqFYeW3NS715+z/dP2/BsCl6R7BFGcjhg+rm5WHblllC3p7QS+sS3HtA==",
       "path": "system.text.json/10.0.6",
       "hashPath": "system.text.json.10.0.6.nupkg.sha512"
+    },
+    "WpfMath/2.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-216GtCBYFMPw5SaArNcuTgemgAWw985LihSEf7mtOjJYTN04X4BVFGPrkJ2Fiv1ffL8gX2xiRw/o+q1SC5oSAA==",
+      "path": "wpfmath/2.1.0",
+      "hashPath": "wpfmath.2.1.0.nupkg.sha512"
+    },
+    "XamlMath.Shared/2.1.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-p7W78KZc2EWuVqAd704m4yGWg0HtxahjNYRVxDWhw7npf8oMD8C7EUc1pjkjZIcmk5PxXJ+t5FE2Fs3gBYjv1A==",
+      "path": "xamlmath.shared/2.1.0",
+      "hashPath": "xamlmath.shared.2.1.0.nupkg.sha512"
     }
   }
 }

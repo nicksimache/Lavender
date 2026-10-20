@@ -1553,6 +1553,30 @@
         "build": {
           "buildTransitive/net8.0/System.Text.Json.targets": {}
         }
+      },
+      "WpfMath/2.1.0": {
+        "type": "package",
+        "dependencies": {
+          "XamlMath.Shared": "2.1.0"
+        },
+        "compile": {
+          "lib/net6.0-windows7.0/WpfMath.dll": {}
+        },
+        "runtime": {
+          "lib/net6.0-windows7.0/WpfMath.dll": {}
+        },
+        "frameworkReferences": [
+          "Microsoft.WindowsDesktop.App.WPF"
+        ]
+      },
+      "XamlMath.Shared/2.1.0": {
+        "type": "package",
+        "compile": {
+          "lib/net6.0/XamlMath.Shared.dll": {}
+        },
+        "runtime": {
+          "lib/net6.0/XamlMath.Shared.dll": {}
+        }
       }
     }
   },
@@ -3596,6 +3620,36 @@
         "system.text.json.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "WpfMath/2.1.0": {
+      "sha512": "216GtCBYFMPw5SaArNcuTgemgAWw985LihSEf7mtOjJYTN04X4BVFGPrkJ2Fiv1ffL8gX2xiRw/o+q1SC5oSAA==",
+      "type": "package",
+      "path": "wpfmath/2.1.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "FONT-LICENSES.md",
+        "README.md",
+        "lib/net462/WpfMath.dll",
+        "lib/net6.0-windows7.0/WpfMath.dll",
+        "wpfmath.2.1.0.nupkg.sha512",
+        "wpfmath.nuspec"
+      ]
+    },
+    "XamlMath.Shared/2.1.0": {
+      "sha512": "p7W78KZc2EWuVqAd704m4yGWg0HtxahjNYRVxDWhw7npf8oMD8C7EUc1pjkjZIcmk5PxXJ+t5FE2Fs3gBYjv1A==",
+      "type": "package",
+      "path": "xamlmath.shared/2.1.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "lib/net462/XamlMath.Shared.dll",
+        "lib/net6.0/XamlMath.Shared.dll",
+        "lib/netstandard2.0/XamlMath.Shared.dll",
+        "xamlmath.shared.2.1.0.nupkg.sha512",
+        "xamlmath.shared.nuspec"
+      ]
     }
   },
   "projectFileDependencyGroups": {
@@ -3610,7 +3664,8 @@
       "Microsoft.ML.Tokenizers >= 2.0.0",
       "Microsoft.ML.Tokenizers.Data.Cl100kBase >= 2.0.0",
       "ModelContextProtocol >= 1.4.1",
-      "OpenAI >= 2.11.0"
+      "OpenAI >= 2.11.0",
+      "WpfMath >= 2.1.0"
     ]
   },
   "packageFolders": {
@@ -3708,6 +3763,10 @@
           "OpenAI": {
             "target": "Package",
             "version": "[2.11.0, )"
+          },
+          "WpfMath": {
+            "target": "Package",
+            "version": "[2.1.0, )"
           }
         },
         "imports": [

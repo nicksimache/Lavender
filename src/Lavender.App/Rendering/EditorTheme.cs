@@ -12,16 +12,19 @@ namespace Lavender.App.Rendering;
 public static class EditorTheme
 {
     // TODO: change this color scheme its ug
-    public const string Text = "#D8DEE9";
-    public const string Keyword = "#C4A7E7";
-    public const string Type = "#7BDAC6";
-    public const string Method = "#EBCB8B";
-    public const string Variable = "#9CDCFE";
-    public const string Property = "#B8C0FF";
-    public const string String = "#E9B38F";
-    public const string Number = "#B5CEA8";
-    public const string Comment = "#8FAF87";
-    public const string Operator = "#89B4FA";
+
+    public const string Text = "#E5E5E5";
+    public const string Keyword = "#C6A0F6";
+    public const string Type = "#8DDEAB";
+    public const string Method = "#E6D89E";
+    public const string Variable = "#8CC8F4";
+    public const string Property = "#DCE0E8";
+    public const string String = "#DFA6B9";
+    public const string Number = "#B5D78F";
+    public const string Comment = "#55C75A";
+    public const string Operator = "#D5D5DC";
+
+
 
     private static readonly HashSet<IHighlightingDefinition> Themed = new();
     private static readonly Dictionary<string, Brush> BrushesByColor = new();

@@ -3,6 +3,7 @@ using Lavender.Infrastructure.Mcp;
 using OpenAI.Chat;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Lavender.Application.Agent;
 
@@ -111,6 +112,10 @@ public sealed class AgentRunner
             IReadOnlyList<McpToolDefinition> availableTools =
                 await _tools.ListToolsAsync(cancellationToken);
             await UpdateSummaryAsync(conversation, cancellationToken);
+            if (_model.UsesResponsesForTools)
+                return await RunResponsesAsync(conversation, turn, projectContext,
+                    availableTools, cancellationToken);
+
             List<ChatMessage> messages = BuildMessages(conversation, projectContext);
             ChatCompletionOptions options = _model.CreateToolOptions(availableTools);
             HashSet<string> executedCalls = new(StringComparer.Ordinal);
@@ -192,6 +197,117 @@ public sealed class AgentRunner
             throw;
         }
     }
+
+    private async Task<AgentRunResult> RunResponsesAsync(
+        Conversation conversation,
+        ConversationTurn turn,
+        string? projectContext,
+        IReadOnlyList<McpToolDefinition> availableTools,
+        CancellationToken cancellationToken)
+    {
+        List<ChatMessage> chatHistory = BuildMessages(conversation, projectContext);
+        string instructions = string.Join("\n\n", chatHistory.OfType<SystemChatMessage>()
+            .Select(MessageText));
+        List<JsonNode> input = chatHistory.Where(message => message is not SystemChatMessage)
+            .Select(message => (JsonNode)ResponsesApiClient.Message(
+                message is AssistantChatMessage ? "assistant" : "user", MessageText(message)))
+            .ToList();
+        HashSet<string> executedCalls = new(StringComparer.Ordinal);
+        int totalToolCalls = 0;
+
+        for (int iteration = 1; iteration <= _settings.MaxIterations; iteration++)
+        {
+            Progress?.Invoke("Thinking…");
+            ResponseTurn response = await _model.CompleteResponseAsync(
+                input, availableTools, instructions, cancellationToken);
+            input.AddRange(response.OutputItems);
+
+            if (response.ToolCalls.Count == 0)
+            {
+                string answer = turn.Steps.Count == 0
+                    ? FinalText(response.Text)
+                    : await CompleteResponseFinalAnswerAsync(turn, input, instructions, cancellationToken);
+                ResponseDelta?.Invoke(answer);
+                return await FinishAsync(conversation, turn, answer, AgentRunStatus.Completed,
+                    iteration, totalToolCalls, null, cancellationToken);
+            }
+
+            if (totalToolCalls + response.ToolCalls.Count > _settings.MaxToolCalls)
+            {
+                AgentStep skipped = new() { Iteration = iteration, CreatedAt = DateTimeOffset.UtcNow };
+                turn.Steps.Add(skipped);
+                foreach (ResponseToolCall call in response.ToolCalls)
+                {
+                    skipped.ToolCalls.Add(new ToolExecutionRecord
+                    {
+                        CallId = call.CallId,
+                        ToolName = call.Name,
+                        ArgumentsJson = call.ArgumentsJson,
+                        StartedAt = DateTimeOffset.UtcNow,
+                        CompletedAt = DateTimeOffset.UtcNow,
+                        Outcome = "not_executed",
+                        OutcomeMessage = "Tool-call limit reached."
+                    });
+                    input.Add(ResponsesApiClient.FunctionOutput(call.CallId,
+                        "Not executed: tool-call limit reached."));
+                }
+                const string limit = "Maximum tool-call count reached.";
+                string answer = await CompleteResponseFinalAnswerAsync(
+                    turn, input, instructions, cancellationToken, limit);
+                ResponseDelta?.Invoke(answer);
+                return await FinishAsync(conversation, turn, answer, AgentRunStatus.LimitReached,
+                    iteration, totalToolCalls, limit, cancellationToken);
+            }
+
+            AgentStep step = new() { Iteration = iteration, CreatedAt = DateTimeOffset.UtcNow };
+            turn.Steps.Add(step);
+            ChatToolCall[] calls = response.ToolCalls.Select(call =>
+                ChatToolCall.CreateFunctionToolCall(call.CallId, call.Name,
+                    BinaryData.FromString(call.ArgumentsJson))).ToArray();
+            ToolChatMessage[] outputs = await ExecuteToolCallsAsync(
+                calls, step, executedCalls, cancellationToken);
+            totalToolCalls += calls.Length;
+            for (int index = 0; index < calls.Length; index++)
+                input.Add(ResponsesApiClient.FunctionOutput(calls[index].Id, MessageText(outputs[index])));
+            await SaveAsync(conversation, cancellationToken);
+        }
+
+        const string iterationLimit = "Maximum agent iteration count reached.";
+        string finalAnswer = await CompleteResponseFinalAnswerAsync(
+            turn, input, instructions, cancellationToken, iterationLimit);
+        ResponseDelta?.Invoke(finalAnswer);
+        return await FinishAsync(conversation, turn, finalAnswer, AgentRunStatus.LimitReached,
+            _settings.MaxIterations, totalToolCalls, iterationLimit, cancellationToken);
+    }
+
+    private async Task<string> CompleteResponseFinalAnswerAsync(
+        ConversationTurn turn,
+        List<JsonNode> input,
+        string instructions,
+        CancellationToken cancellationToken,
+        string? limitReason = null)
+    {
+        ToolUseSummary[] toolUses = turn.Steps.SelectMany(step => step.ToolCalls)
+            .Select(ToolUseSummary.FromRecord).ToArray();
+        string finalInstructions = instructions + "\n\n" +
+            "Produce the final answer now using the ordered tool-use record and verified tool evidence. " +
+            "Only claim edits that a tool confirmed. Distinguish failures, blocked calls and timeouts. " +
+            "Do not request further tools. Keep the answer concise.";
+        if (limitReason is not null)
+            finalInstructions += "\nThe tool loop stopped because: " + limitReason;
+        input.Add(ResponsesApiClient.Message("user", ToolUseSummary.BuildFinalPrompt(toolUses)));
+        Progress?.Invoke("Summarizing tool results…");
+        ResponseTurn response = await _model.CompleteResponseAsync(
+            input, [], finalInstructions, cancellationToken);
+        return FinalText(response.Text);
+    }
+
+    private static string MessageText(ChatMessage message) =>
+        string.Join("\n", message.Content.Select(part => part.Text)
+            .Where(part => !string.IsNullOrEmpty(part)));
+
+    private static string FinalText(string text) =>
+        string.IsNullOrWhiteSpace(text) ? "I could not produce a final response." : text;
 
     private List<ChatMessage> BuildMessages(
         Conversation conversation,

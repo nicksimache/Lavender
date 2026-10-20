@@ -3,6 +3,7 @@ using Lavender.Application.Agent;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Text;
+using System.Text.Json.Nodes;
 
 namespace Lavender.Infrastructure.AI;
 
@@ -10,6 +11,8 @@ public sealed class OpenAIService
 {
     private ChatClient? _client;
     private AgentModelOption _model;
+    private readonly ResponsesApiClient _responses = new();
+    public bool UsesResponsesForTools => _model.Id.StartsWith("gpt-6", StringComparison.Ordinal);
 
     public OpenAIService(string model)
         : this(new AgentModelOption { Id = model, Label = model })
@@ -28,8 +31,6 @@ public sealed class OpenAIService
 
     public ChatCompletionOptions CreateToolOptions(IReadOnlyList<McpToolDefinition> tools)
     {
-        if (tools.Count > 0 && _model.ToolCompatibilityError is string error)
-            throw new InvalidOperationException(error);
         ChatCompletionOptions options = new();
         foreach (McpToolDefinition tool in tools)
         {
@@ -38,6 +39,13 @@ public sealed class OpenAIService
         }
         return options;
     }
+
+    public Task<ResponseTurn> CompleteResponseAsync(
+        IReadOnlyList<JsonNode> input,
+        IReadOnlyList<McpToolDefinition> tools,
+        string instructions,
+        CancellationToken cancellationToken = default) =>
+        _responses.CompleteAsync(_model, input, tools, instructions, cancellationToken);
 
     public async Task<ChatCompletion> CompleteAsync(
         IEnumerable<ChatMessage> messages,

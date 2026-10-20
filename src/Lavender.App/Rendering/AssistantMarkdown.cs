@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using WpfMath.Controls;
 
 namespace Lavender.App.Rendering;
 
@@ -10,7 +11,7 @@ namespace Lavender.App.Rendering;
 internal static class AssistantMarkdown
 {
     private static readonly Regex InlinePattern = new(
-        @"\*\*(?<bold>.+?)\*\*|(?<!\*)\*(?!\*)(?<italic>.+?)\*|`(?<code>[^`]+)`|\[(?<label>[^\]]+)\]\((?<url>[^)]+)\)",
+        @"\*\*(?<bold>.+?)\*\*|(?<!\*)\*(?!\*)(?<italic>.+?)\*|`(?<code>[^`]+)`|\[(?<label>[^\]]+)\]\((?<url>[^)]+)\)|(?<!\\)\\\((?<mathParen>[^`]+?)\\\)|(?<![\\$])\$(?![\s$])(?<mathDollar>[^$`\r\n]*?\S)\$(?!\$)",
         RegexOptions.Compiled | RegexOptions.Singleline);
 
     private static readonly Regex OrderedList = new(@"^\d+[.)]\s+", RegexOptions.Compiled);
@@ -39,6 +40,13 @@ internal static class AssistantMarkdown
                     FontFamily = new FontFamily("Cascadia Mono"),
                     Background = new SolidColorBrush(Color.FromRgb(43, 43, 43))
                 });
+                continue;
+            }
+
+            if (TryReadDisplayMath(lines, index, out string math, out int endIndex, out string original))
+            {
+                AddMath(block.Inlines, math, original, display: true);
+                index = endIndex;
                 continue;
             }
 
@@ -101,6 +109,12 @@ internal static class AssistantMarkdown
                     FontFamily = new FontFamily("Cascadia Mono"),
                     Background = new SolidColorBrush(Color.FromRgb(43, 43, 43))
                 });
+            else if (match.Groups["mathParen"].Success || match.Groups["mathDollar"].Success)
+            {
+                string formula = match.Groups["mathParen"].Success
+                    ? match.Groups["mathParen"].Value : match.Groups["mathDollar"].Value;
+                AddMath(output, formula, match.Value, display: false);
+            }
             else
             {
                 // Show the label and URL as text; opening links requires a user action.
@@ -115,5 +129,71 @@ internal static class AssistantMarkdown
         }
         if (position < text.Length)
             output.Add(new Run(text[position..]));
+    }
+
+    private static bool TryReadDisplayMath(string[] lines, int start, out string math, out int end, out string original)
+    {
+        math = original = "";
+        end = start;
+        string trimmed = lines[start].Trim();
+        string opening = trimmed.StartsWith("$$", StringComparison.Ordinal) ? "$$"
+            : trimmed.StartsWith("\\[", StringComparison.Ordinal) ? "\\[" : "";
+        if (opening.Length == 0)
+            return false;
+
+        string closing = opening == "$$" ? "$$" : "\\]";
+        string firstLine = trimmed[opening.Length..];
+        int sameLineEnd = firstLine.IndexOf(closing, StringComparison.Ordinal);
+        if (sameLineEnd >= 0 && string.IsNullOrWhiteSpace(firstLine[(sameLineEnd + closing.Length)..]))
+        {
+            math = firstLine[..sameLineEnd];
+            original = lines[start];
+            return true;
+        }
+
+        for (int candidate = start + 1; candidate < lines.Length; candidate++)
+        {
+            string candidateLine = lines[candidate].Trim();
+            if (!candidateLine.EndsWith(closing, StringComparison.Ordinal))
+                continue;
+
+            end = candidate;
+            original = string.Join("\n", lines[start..(end + 1)]);
+            math = string.Join("\n", lines[(start + 1)..end].Prepend(firstLine)
+                .Append(candidateLine[..^closing.Length])).Trim();
+            return true;
+        }
+
+        // Keep an unfinished expression visible during streaming.
+        return false;
+    }
+
+    private static void AddMath(InlineCollection output, string formula, string original, bool display)
+    {
+        try
+        {
+            FormulaControl control = new()
+            {
+                Formula = formula,
+                Scale = display ? 17 : 13,
+                Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            if (control.HasError)
+            {
+                output.Add(new Run(original));
+                return;
+            }
+
+            output.Add(new InlineUIContainer(control)
+            {
+                BaselineAlignment = BaselineAlignment.Center
+            });
+        }
+        catch (Exception)
+        {
+            output.Add(new Run(original));
+        }
     }
 }

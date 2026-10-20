@@ -24,6 +24,7 @@
 		<PackageReference Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0" />
 		<PackageReference Include="ModelContextProtocol" Version="1.4.1" />
 		<PackageReference Include="OpenAI" Version="2.11.0" />
+		<PackageReference Include="WpfMath" Version="2.1.0" />
 		<PackageReference Include="Microsoft.Build.Framework" Version="17.11.48" ExcludeAssets="runtime" PrivateAssets="all" />
 	</ItemGroup>
 

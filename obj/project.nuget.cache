@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "o4Nl5u9u+MI=",
+  "dgSpecHash": "PDFPMTGVO+0=",
   "success": true,
   "projectFilePath": "C:\\Users\\nicks\\OneDrive\\Desktop\\lavender\\Lavender\\Lavender.csproj",
   "expectedPackageFiles": [
@@ -63,7 +63,9 @@
     "C:\\Users\\nicks\\.nuget\\packages\\system.runtime.compilerservices.unsafe\\6.1.2\\system.runtime.compilerservices.unsafe.6.1.2.nupkg.sha512",
     "C:\\Users\\nicks\\.nuget\\packages\\system.security.cryptography.protecteddata\\10.0.1\\system.security.cryptography.protecteddata.10.0.1.nupkg.sha512",
     "C:\\Users\\nicks\\.nuget\\packages\\system.text.encodings.web\\10.0.6\\system.text.encodings.web.10.0.6.nupkg.sha512",
-    "C:\\Users\\nicks\\.nuget\\packages\\system.text.json\\10.0.6\\system.text.json.10.0.6.nupkg.sha512"
+    "C:\\Users\\nicks\\.nuget\\packages\\system.text.json\\10.0.6\\system.text.json.10.0.6.nupkg.sha512",
+    "C:\\Users\\nicks\\.nuget\\packages\\wpfmath\\2.1.0\\wpfmath.2.1.0.nupkg.sha512",
+    "C:\\Users\\nicks\\.nuget\\packages\\xamlmath.shared\\2.1.0\\xamlmath.shared.2.1.0.nupkg.sha512"
   ],
   "logs": []
 }

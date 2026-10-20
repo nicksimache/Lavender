@@ -2,7 +2,8 @@ using Lavender.Application.Agent;
 using Lavender.Infrastructure.AI;
 using Lavender.Infrastructure.FileSystem;
 
-string temp = Path.Combine(Path.GetTempPath(), "LavenderMemoryTests", Guid.NewGuid().ToString("N"));
+string fixtureRoot = Path.Combine(AppContext.BaseDirectory, "LavenderMemoryTests");
+string temp = Path.Combine(fixtureRoot, Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(temp);
 int passed = 0;
 void Check(bool condition, string name)
@@ -33,7 +34,7 @@ try
     var gpt5 = configured.Models.Single();
     Check(gpt5.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[]
         { null, ReasoningEffort.Minimal, ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High }),
-        "GPT-5 slider offers model default and supported effort levels");
+        "GPT-5 menu offers model default and supported effort levels");
     gpt5.ReasoningEffort = ReasoningEffort.High;
     gpt5.ValidateReasoning();
     var gpt4 = defaults.Models.First(model => model.Id == "gpt-4.1-mini");
@@ -42,8 +43,18 @@ try
     Check(gpt5.ReasoningEffort == ReasoningEffort.High, "editing one model preserves its independent selection");
     var sol = new AgentModelOption { Id = "gpt-6-sol", Label = "GPT-6 Sol", ReasoningEffort = ReasoningEffort.None };
     sol.ValidateReasoning();
-    Check(sol.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[] { ReasoningEffort.None }),
-        "GPT-6 Sol tool flow only permits explicit none");
+    Check(sol.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[]
+        { null, ReasoningEffort.None, ReasoningEffort.Low, ReasoningEffort.Medium,
+          ReasoningEffort.High, ReasoningEffort.XHigh, ReasoningEffort.Max }),
+        "GPT-6 Sol offers default, none, and supported reasoning levels");
+    foreach (string id in new[] { "gpt-6-astra", "gpt-6.1-sol" })
+    {
+        AgentModelOption reasoningModel = defaults.Models.First(model => model.Id == id);
+        Check(reasoningModel.AllowedReasoningLevels.SequenceEqual(new ReasoningEffort?[]
+            { null, ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High,
+              ReasoningEffort.XHigh, ReasoningEffort.Max }),
+            $"{id} offers supported reasoning levels without none");
+    }
     foreach (var invalid in new[] { ReasoningEffort.None, ReasoningEffort.XHigh, (ReasoningEffort)999 })
     {
         bool effortRejected = false;
@@ -58,8 +69,6 @@ try
         try { AgentSettings.Load(configPath); } catch (System.Text.Json.JsonException) { enumRejected = true; }
         Check(enumRejected, $"configuration rejects unknown or numeric enum value {value}");
     }
-    Check(new AgentModelOption { Id = "gpt-6-astra" }.ToolCompatibilityError is not null,
-        "Astra tool incompatibility is explicit");
     foreach (ReasoningEffort effort in Enum.GetValues<ReasoningEffort>())
     {
         string json = System.Text.Json.JsonSerializer.Serialize(effort);
@@ -448,7 +457,7 @@ try
 }
 finally
 {
-    string allowed = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "LavenderMemoryTests")) + Path.DirectorySeparatorChar;
+    string allowed = Path.GetFullPath(fixtureRoot) + Path.DirectorySeparatorChar;
     if (!Path.GetFullPath(temp).StartsWith(allowed, StringComparison.OrdinalIgnoreCase))
         throw new InvalidOperationException("Unexpected test cleanup path.");
     // Git object files can be read-only on Windows; this is the verified temporary fixture only.

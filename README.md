@@ -11,26 +11,30 @@ Shift+Enter adds a line.
 The arrow becomes a stop button during a response. Use + to add project files.
 User messages use compact, right-aligned solid-color bubbles capped at 70% of the
 chat width. Assistant replies render common Markdown (including bold, italics,
-headings, lists, and code) without a bubble. Streamed replies reveal one character
-about every 24 ms. A direct answer currently makes one additional
-final-answer request after the agent's tool-decision request, so streaming can
-increase API usage for messages that need no tools.
+headings, lists, and code) and LaTeX math (`$...$`, `\(...\)`, `$$...$$`,
+and `\[...\]`) without a bubble. Invalid or unfinished math remains visible
+as source text. Assistant replies reveal one character at a time; adjust
+ReplyCharacterIntervalMs in MainWindow.xaml.cs to change the pace. On the Chat
+Completions path, a direct answer makes an additional final-answer request
+after the agent's tool-decision request.
 
-Click the model name in the composer to open the model menu and its **Reasoning**
-slider. The slider remembers a separate selection for each model for the current
-app session. It snaps to valid levels and is locked while a response is running.
-GPT-5 offers Default, Minimal, Low, Medium, and High.
-Default omits the API parameter; it is different from None. GPT-4.1 mini has no
-adjustable reasoning. GPT-6 Sol/Luna are fixed at None for the current tool flow.
-Hover over a disabled control to see why it is unavailable.
+Click the model name in the composer to open the model list. Choosing a model with
+adjustable reasoning changes the menu to a vertical list of reasoning levels;
+choose a level to close it, or go back to the model list. Each model remembers its
+reasoning selection for the current app session. The menu is locked during a response.
+The selected level appears in gray beside the white model name; None leaves it blank. GPT-5 offers
+Default, Minimal, Low, Medium, and High. GPT-6 Sol/Luna offer Default, None,
+Low, Medium, High, XHigh, and Max; GPT-6 Astra and GPT-6.1 Sol offer the same
+choices except None. Default omits the API parameter. GPT-4.1 mini has no
+adjustable reasoning. Hover over a model choice for its reasoning hint.
 The context and Clear files row appears only while files are attached to the chat.
 
 `AgentModelOption.ReasoningEffort` is a nullable `ReasoningEffort` enum with None,
 Minimal, Low, Medium, High, XHigh, and Max. Configuration keeps readable strings
 such as `"ReasoningEffort": "medium"`; omit the property or use null for Default.
-Unknown values, numbers, and levels incompatible with the model's current tool
-integration are rejected. New model IDs need an allowed-level mapping in
-`AgentModelOption` before their slider can be enabled.
+Unknown values, numbers, and levels incompatible with the model are rejected.
+New model IDs need an allowed-level mapping in `AgentModelOption` before their
+reasoning choices appear.
 
 All configured models use `OPENAI_API_KEY` by default. OpenAI keys belong to a project,
 not an individual model: your existing key can be used for any model that project
@@ -58,11 +62,10 @@ corresponding model entries. The variable name is not the secret key itself.
 editing the source configuration, or edit `appsettings.json` beside the deployed
 executable and restart. The dropdown selection lasts for the current app session.
 
-Lavender currently uses Chat Completions with function tools. GPT-6 Sol and Luna are
-configured with `ReasoningEffort: "none"` for compatibility with that tool flow.
-GPT-6 Astra and GPT-6.1 Sol appear in the model menu, but selecting them for a
-tool-enabled chat shows a compatibility message: they require a Responses API
-implementation before they can run the agent's tools.
+Lavender uses the Responses API for GPT-6 agent turns and Chat Completions for
+GPT-5 and GPT-4.1 mini. GPT-6 requests set `store: false` and replay returned
+reasoning and tool items within the turn. The default GPT-6 Sol configuration
+still selects None; choose another level from the menu when needed.
 
 A missing-key message names the environment variable to set. A model-access error
 requires checking the exact model ID, project permissions, and API billing in your

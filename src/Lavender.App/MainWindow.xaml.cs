@@ -59,8 +59,8 @@ namespace Lavender.App
 
         // Chat services and operation state.
         private readonly AgentRunner _agentRunner;
-        // Adjust this interval to change the visible reply speed (24 ms per character).
-        private const int ReplyCharacterIntervalMs = 24;
+        // Adjust this interval to change the visible reply speed.
+        private const int ReplyCharacterIntervalMs = 2;
         private readonly DispatcherTimer _replyRevealTimer = new()
         {
             Interval = TimeSpan.FromMilliseconds(ReplyCharacterIntervalMs)
@@ -71,7 +71,8 @@ namespace Lavender.App
         private bool _replyStreamComplete;
         private TextBlock? _streamingReplyText;
         private readonly OpenAIService _model;
-        private bool _updatingReasoning;
+        private IReadOnlyList<AgentModelOption> _availableModels = [];
+        private AgentModelOption _selectedModel = null!;
         private readonly JsonConversationStore _conversations;
         private bool _busy;
         private bool _refreshingHistory;
@@ -116,8 +117,9 @@ namespace Lavender.App
             _mcpClient = new LavenderMcpClient(FindRepositoryRoot());
             _conversations = new(settings.HistoryDirectory, settings.PersistHistory);
             _model = new(settings.Models.First(model => model.Id == settings.Model));
-            ModelPicker.ItemsSource = settings.Models;
-            ModelPicker.SelectedValue = settings.Model;
+            _availableModels = settings.Models;
+            _selectedModel = settings.Models.First(model => model.Id == settings.Model);
+            RefreshModelPickerLabel();
             _agentRunner = new AgentRunner(settings, _model, _mcpClient, _conversations);
 
             _agentRunner.Progress += status => Dispatcher.InvokeAsync(() =>
@@ -414,7 +416,8 @@ namespace Lavender.App
             System.Windows.Automation.AutomationProperties.SetName(SendButton,
                 _activeRun is not null ? "Stop response" : "Send message");
             ModelPicker.IsEnabled = !busy;
-            RefreshReasoningControl();
+            if (busy)
+                ModelMenuPopup.IsOpen = false;
             AttachFilesButton.IsEnabled = !busy;
             ConversationPicker.IsEnabled = !busy;
             NewChatButton.IsEnabled = !busy;
@@ -427,56 +430,110 @@ namespace Lavender.App
 
         #region Chat requests and messages
 
-        private void ModelPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ModelPicker_Click(object sender, RoutedEventArgs e)
         {
-            RefreshReasoningControl();
+            if (_busy)
+                return;
+            ShowModelChoices();
+            ModelMenuPopup.IsOpen = true;
         }
 
-        private void ModelPicker_DropDownOpened(object sender, EventArgs e)
+        private void ModelMenuPopup_Closed(object sender, EventArgs e)
         {
-            RefreshReasoningControl();
+            ModelMenu.Visibility = Visibility.Visible;
+            ReasoningMenu.Visibility = Visibility.Collapsed;
         }
 
-        private void RefreshReasoningControl()
+        private void ShowModelChoices()
         {
-            if (ModelPicker.SelectedItem is not AgentModelOption model)
-                return;
-            ModelPicker.ApplyTemplate();
-            Slider? slider = ModelPicker.Template.FindName("ReasoningSlider", ModelPicker) as Slider;
-            TextBlock? valueText = ModelPicker.Template.FindName("ReasoningValueText", ModelPicker) as TextBlock;
-            FrameworkElement? control = ModelPicker.Template.FindName("ReasoningControl", ModelPicker) as FrameworkElement;
-            if (slider is null || valueText is null || control is null)
-                return;
-
-            _updatingReasoning = true;
-            try
+            ModelListPanel.Children.Clear();
+            foreach (AgentModelOption model in _availableModels)
             {
-                var levels = model.AllowedReasoningLevels;
-                slider.Maximum = Math.Max(0, levels.Count - 1);
-                slider.Value = Enumerable.Range(0, levels.Count)
-                    .First(index => levels[index] == model.ReasoningEffort);
-                slider.IsEnabled = !_busy && levels.Count > 1;
-                valueText.Text = model.ToolCompatibilityError is not null ? "Unavailable"
-                    : model.Id == "gpt-4.1-mini" ? "Not supported"
-                    : model.ReasoningEffort?.ToString() ?? "Default";
-                slider.ToolTip = model.ReasoningHint;
-                control.ToolTip = model.ReasoningHint;
-                System.Windows.Automation.AutomationProperties.SetHelpText(slider, model.ReasoningHint);
-                System.Windows.Automation.AutomationProperties.SetName(slider,
-                    $"Reasoning effort: {valueText.Text}");
+                Button option = CreateMenuOption(model.Label, model == _selectedModel,
+                    () => SelectModelFromMenu(model));
+                option.ToolTip = model.AllowedReasoningLevels.Count > 1
+                    ? "Choose a reasoning level after selecting this model." : model.ReasoningHint;
+                ModelListPanel.Children.Add(option);
             }
-            finally { _updatingReasoning = false; }
+            ModelMenu.Visibility = Visibility.Visible;
+            ReasoningMenu.Visibility = Visibility.Collapsed;
         }
 
-        private void ReasoningSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        private void SelectModelFromMenu(AgentModelOption model)
         {
-            if (_updatingReasoning || _busy || ModelPicker.SelectedItem is not AgentModelOption model)
+            if (_busy)
                 return;
-            int index = (int)Math.Round(e.NewValue);
-            if (index < 0 || index >= model.AllowedReasoningLevels.Count)
+            _selectedModel = model;
+            RefreshModelPickerLabel();
+            if (model.AllowedReasoningLevels.Count <= 1)
+            {
+                ModelMenuPopup.IsOpen = false;
                 return;
-            model.ReasoningEffort = model.AllowedReasoningLevels[index];
-            RefreshReasoningControl();
+            }
+
+            ReasoningListPanel.Children.Clear();
+            foreach (ReasoningEffort? level in model.AllowedReasoningLevels)
+            {
+                string label = level?.ToString() ?? "Default";
+                Button option = CreateMenuOption(label, level == model.ReasoningEffort, () =>
+                {
+                    model.ReasoningEffort = level;
+                    RefreshModelPickerLabel();
+                    ModelMenuPopup.IsOpen = false;
+                });
+                option.ToolTip = model.ReasoningHint;
+                System.Windows.Automation.AutomationProperties.SetName(option, $"{model.Label} reasoning: {label}");
+                ReasoningListPanel.Children.Add(option);
+            }
+            ModelMenu.Visibility = Visibility.Collapsed;
+            ReasoningMenu.Visibility = Visibility.Visible;
+        }
+
+        private void ReasoningBack_Click(object sender, RoutedEventArgs e) => ShowModelChoices();
+
+        private void RefreshModelPickerLabel()
+        {
+            ModelPickerLabel.Text = _selectedModel.Label;
+            bool showReasoning = _selectedModel.AllowedReasoningLevels.Count > 1 &&
+                _selectedModel.ReasoningEffort != ReasoningEffort.None;
+            ModelPickerReasoningLabel.Text = showReasoning
+                ? _selectedModel.ReasoningEffort?.ToString() ?? "Default" : "";
+            ModelPickerReasoningLabel.Visibility = showReasoning
+                ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static Button CreateMenuOption(string label, bool selected, Action choose)
+        {
+            Grid content = new();
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            content.Children.Add(new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center });
+            if (selected)
+            {
+                TextBlock check = new()
+                {
+                    Text = "✓",
+                    Foreground = new SolidColorBrush(Color.FromRgb(187, 158, 232)),
+                    Margin = new Thickness(12, 0, 0, 0)
+                };
+                Grid.SetColumn(check, 1);
+                content.Children.Add(check);
+            }
+
+            Button option = new()
+            {
+                Content = content,
+                Background = selected ? new SolidColorBrush(Color.FromRgb(73, 56, 94)) : Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Padding = new Thickness(10, 7, 10, 7),
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                MinHeight = 32,
+                MinWidth = 212,
+                Margin = new Thickness(0, 1, 0, 1)
+            };
+            System.Windows.Automation.AutomationProperties.SetName(option, label);
+            option.Click += (_, _) => choose();
+            return option;
         }
 
         /// <summary>
@@ -522,12 +579,6 @@ namespace Lavender.App
                 return;
             }
 
-            if (ModelPicker.SelectedItem is AgentModelOption candidate && candidate.ToolCompatibilityError is string error)
-            {
-                AddMessageBubble(error, false);
-                return;
-            }
-
             AddMessageBubble(input, true);
             UserInputBox.Text = "";
             _streamingReplyText = null;
@@ -537,8 +588,7 @@ namespace Lavender.App
             _replyDrained = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             try
             {
-                if (ModelPicker.SelectedItem is AgentModelOption selectedModel)
-                    _model.SelectModel(selectedModel);
+                _model.SelectModel(_selectedModel);
                 _activeRun = new CancellationTokenSource();
                 SetBusy(true);
                 AgentRunResult result = await _agentRunner.RunAsync(_activeConversationId, input, BuildProjectContext(), _activeRun.Token);
