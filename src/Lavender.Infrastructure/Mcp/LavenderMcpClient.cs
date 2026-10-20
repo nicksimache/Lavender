@@ -122,6 +122,19 @@ public sealed class LavenderMcpClient : IAsyncDisposable
             candidate => candidate.Name.Equals(toolName, StringComparison.Ordinal))
             ?? throw new InvalidOperationException($"Unknown MCP tool: {toolName}");
 
+        try
+        {
+            using var argumentDocument = JsonDocument.Parse(argumentsJson);
+            if (argumentDocument.RootElement.ValueKind != JsonValueKind.Object)
+                throw new ArgumentException("Tool arguments must be a JSON object. No tool executed.");
+            ToolArgumentValidator.Validate(argumentDocument.RootElement, tool.JsonSchema);
+            ToolArgumentValidator.ValidateSource(toolName, argumentDocument.RootElement);
+        }
+        catch (Exception ex) when (ex is JsonException or ArgumentException or InvalidOperationException)
+        {
+            Lavender.Infrastructure.AI.ApiUsageTracker.Write(new { event_type = "tool_arguments_rejected", tool = toolName, reason = ex.Message });
+            throw;
+        }
         Dictionary<string, object?> arguments =
             JsonSerializer.Deserialize<Dictionary<string, object?>>(argumentsJson) ?? [];
 

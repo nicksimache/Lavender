@@ -41,7 +41,21 @@ public sealed class AgentRunner
         Indexing is managed by Lavender on project load. Never try to call lavender_index_project. After edits, read files directly because symbol and semantic indexes may be stale.
         Never claim to edit files unless an available editing tool successfully performed the edit.
         Before modifying, moving or deleting an existing file, call lavender_read_file and use its content_hash.
-        Use lavender_write_lines for replacements or insertions, and create_file only for new paths.
+        Plan related changes together and prefer lavender_apply_edits for multiple non-overlapping edits to one file.
+        Batch ranges all refer to the same original file and require its content_hash. Verify changed regions once after the batch.
+        Before generating a large replacement, obtain the file hash and decide the complete set of related changes.
+        Put all already-known independent changes to the SAME file into ONE lavender_apply_edits call with multiple edits.
+        Use a single write for a single change; do not split a known plan into one-line edit/read cycles.
+        A fully covered read is a signal to use retained source, not ask again for smaller overlapping ranges.
+        Fix related compiler errors together, then request diagnostics once. Stop verification once the relevant code is verified and compiler errors are resolved.
+        Context notices are metadata, NEVER source code. Never paste a retirement, truncation, or omission notice into a file.
+        Latest successful file hashes supersede ALL older snapshots of that path, even if older text remains in history until a compaction checkpoint.
+        Use lavender_write_lines for single replacements or insertions, and create_file only for new paths.
+        Use lavender_list_files to discover source/config files; lavender_list_assets is only for images.
+        Diagnostics refresh independently of the search index. Request them after a coherent edit batch, not each tiny edit.
+        Do not repeat a failed tool without changing its inputs or addressing the reported cause.
+        Read-cache notices refer to content still present in this request. Reuse it; ask only for missing ranges.
+        Old image previews may be retired; inspect again if pixel details are needed.
         If a hash is stale, reread and reconsider the edit. Successful writes return a new hash for subsequent edits.
         Chat may begin while indexing is running. Read source files immediately; semantic search can return partial results.
         Treat partial or low-confidence search as incomplete evidence, never proof that code does not exist. Do not start duplicate indexing while a run is active.
@@ -130,7 +144,7 @@ public sealed class AgentRunner
                     availableTools, cancellationToken);
 
             List<ChatMessage> messages = BuildMessages(conversation, projectContext);
-            var workingContext = new WorkingToolContext();
+            var workingContext = new WorkingToolContext(_settings.MaxToolResultCharacters);
             ChatCompletionOptions options = _model.CreateToolOptions(availableTools);
             HashSet<string> executedCalls = new(StringComparer.Ordinal);
             int totalToolCalls = 0;
@@ -230,7 +244,7 @@ public sealed class AgentRunner
                 message is AssistantChatMessage ? "assistant" : "user", MessageText(message)))
             .ToList();
         HashSet<string> executedCalls = new(StringComparer.Ordinal);
-        var workingContext = new WorkingToolContext();
+        var workingContext = new WorkingToolContext(_settings.MaxToolResultCharacters);
         int totalToolCalls = 0;
 
         for (int iteration = 1; iteration <= _settings.MaxIterations; iteration++)
@@ -240,6 +254,7 @@ public sealed class AgentRunner
             ResponseTurn response = await _model.CompleteResponseAsync(
                 input, availableTools, instructions, cancellationToken);
             input.AddRange(response.OutputItems);
+            workingContext.RecordResponseGroup(response.OutputItems);
 
             if (response.ToolCalls.Count == 0)
             {
@@ -411,11 +426,12 @@ public sealed class AgentRunner
     {
         // Execute in the model's requested order: a read may depend on the preceding edit.
         ConcurrentDictionary<int, ToolChatMessage> results = new();
+        Dictionary<int, string> combinedResults = new();
 
         foreach (var (call, index) in calls.Select((call, index) => (call, index)))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string arguments = call.FunctionArguments.ToString();
+            string arguments = workingContext.CompleteKnownHash(call.FunctionName, call.FunctionArguments.ToString());
             Progress?.Invoke($"Using {call.FunctionName}…");
             string signature = $"{call.FunctionName}\n{arguments}";
             ToolExecutionRecord record = new()
@@ -442,13 +458,16 @@ public sealed class AgentRunner
                 executedCalls.Add(signature);
             }
 
-            if (record.WasBlockedAsRepeat)
+            string? recentFailure = workingContext.RecentFailure(call.FunctionName, arguments);
+            if (!combinedResults.ContainsKey(index) && (record.WasBlockedAsRepeat || recentFailure is not null))
             {
-                record.Error = "Identical repeated tool call blocked.";
+                record.Error = recentFailure ?? "Identical repeated tool call blocked.";
+                ApiUsageTracker.Write(new { event_type = "tool_repeat_blocked", tool = call.FunctionName, reason = record.Error });
                 record.Outcome = "blocked";
                 record.OutcomeMessage = record.Error;
                 record.CompletedAt = DateTimeOffset.UtcNow;
                 results[index] = new ToolChatMessage(call.Id, record.Error);
+                workingContext.RecordExecution(record);
                 ToolCompleted?.Invoke(record);
                 continue;
             }
@@ -456,11 +475,22 @@ public sealed class AgentRunner
             using CancellationTokenSource timeout =
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(_settings.ToolTimeoutSeconds));
+            var batch = combinedResults.ContainsKey(index) ? null : ToolEditBatchPlanner.Plan(calls, index);
 
             try
             {
-                string output = await _tools.CallToolAsync(
-                    call.FunctionName, arguments, timeout.Token);
+                string output;
+                if (combinedResults.Remove(index, out string? combinedOutput)) output = combinedOutput;
+                else
+                {
+                    if (batch is not null)
+                        ApiUsageTracker.Write(new { event_type = "tool_calls_batched", calls = batch.Count,
+                            call_ids = calls.Skip(index).Take(batch.Count).Select(c => c.Id), arguments = batch.Arguments });
+                    output = await _tools.CallToolAsync(batch is null ? call.FunctionName : "lavender_apply_edits",
+                        batch?.Arguments ?? arguments, timeout.Token);
+                    if (batch is not null)
+                        for (int next = index + 1; next < index + batch.Count; next++) combinedResults[next] = output;
+                }
                 // Images must be multimodal inputs, not base64 text inside tool output.
                 // Keep metadata in history; the exact image input is captured by API tracking.
                 if (call.FunctionName == "lavender_inspect_image")
@@ -479,6 +509,10 @@ public sealed class AgentRunner
                     : ex.Message;
                 record.Outcome = ex is OperationCanceledException ? "timed_out" : "failed";
                 record.OutcomeMessage = record.Error + " No successful action was confirmed.";
+                if (batch is not null)
+                    for (int next = index + 1; next < index + batch.Count; next++)
+                        combinedResults[next] = JsonSerializer.Serialize(new { success = false,
+                            message = "Combined edit did not confirm completion: " + record.Error + ". Read current source before retrying." });
                 results[index] = new ToolChatMessage(
                     call.Id, $"Tool error: {record.Error}");
             }
@@ -490,6 +524,7 @@ public sealed class AgentRunner
                     record.OutcomeMessage = "Cancelled; completion was not confirmed.";
                 }
                 record.CompletedAt = DateTimeOffset.UtcNow;
+                workingContext.RecordExecution(record);
                 ToolCompleted?.Invoke(record);
             }
         }
@@ -563,7 +598,7 @@ public sealed class AgentRunner
             reason,
             ExtractToolDiagnostics(turn),
             ProjectFilesChanged: turn.Steps.SelectMany(step => step.ToolCalls)
-                .Any(call => call.ToolName is "lavender_create_file" or "lavender_delete_file" or "lavender_move_file" or "lavender_write_lines"
+                .Any(call => call.ToolName is "lavender_create_file" or "lavender_delete_file" or "lavender_move_file" or "lavender_write_lines" or "lavender_apply_edits"
                     && call.Outcome == "succeeded"));
     }
 

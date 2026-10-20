@@ -83,10 +83,20 @@ public sealed record ToolUseSummary(string CallId, string ToolName, string Argum
                 return Clip(arguments, 2000);
             var values = new Dictionary<string, string>();
             foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (property.Name.Equals("edits", StringComparison.OrdinalIgnoreCase) && property.Value.ValueKind == JsonValueKind.Array)
+                {
+                    values[property.Name] = $"[{property.Value.GetArrayLength()} edits; original line ranges: " +
+                        string.Join(", ", property.Value.EnumerateArray().Take(20).Select(edit =>
+                            Get(edit, "startLine", out var start) && Get(edit, "endLine", out var end)
+                                ? $"{start}-{end}" : "unspecified")) + "]";
+                    continue;
+                }
                 values[property.Name] = property.Name.Contains("code", StringComparison.OrdinalIgnoreCase)
                     || property.Name.Contains("content", StringComparison.OrdinalIgnoreCase)
                     ? $"[{property.Value.ToString().Length} characters; see original tool arguments]"
                     : Clip(property.Value.ToString(), 500);
+            }
             return Clip(JsonSerializer.Serialize(values), 2000);
         }
         catch (JsonException)

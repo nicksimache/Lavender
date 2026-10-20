@@ -21,6 +21,7 @@ internal static class FileToolExecution
         new(true, edit.Changed, edit.Changed ? status : "unchanged",
             edit.Changed ? $"{status}: {edit.Path}. Read source directly before semantic/symbol queries."
                 : "Contents already match; no change made.",
-            edit.Path, edit.DestinationPath, ContentHash: edit.ContentHash, BackupPath: edit.BackupPath);
+            edit.Path, edit.DestinationPath, ContentHash: edit.ContentHash, BackupPath: edit.BackupPath,
+            LineChanges: edit.Changes);
 }
 

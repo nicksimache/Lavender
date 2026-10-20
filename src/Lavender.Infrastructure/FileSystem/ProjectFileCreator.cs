@@ -12,6 +12,7 @@ public static class ProjectFileCreator
         ArgumentException.ThrowIfNullOrWhiteSpace(projectRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(content);
+        SourceWriteGuard.Validate(content);
         if (Path.IsPathRooted(path))
             throw new ArgumentException("Use a path relative to the project root.");
         string[] parts = path.Replace('\\', '/').Split('/');

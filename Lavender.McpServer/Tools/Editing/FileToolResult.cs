@@ -15,7 +15,8 @@ public sealed record FileToolResult(
     [property: JsonPropertyName("backup_path")] string? BackupPath = null,
     [property: JsonPropertyName("line_count")] int? LineCount = null,
     [property: JsonPropertyName("encoding")] string? Encoding = null,
-    [property: JsonPropertyName("content")] string? Content = null)
+    [property: JsonPropertyName("content")] string? Content = null,
+    [property: JsonPropertyName("line_changes")] IReadOnlyList<Lavender.Infrastructure.FileSystem.LineChange>? LineChanges = null)
 {
     public static FileToolResult NotImplemented(string operation, string path) =>
         new(false, false, "not_implemented", $"{operation} is a skeleton. No file was changed.", path);

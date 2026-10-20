@@ -1,5 +1,4 @@
 using Lavender.Diagnostics;
-using Lavender.Infrastructure.Knowledge;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
@@ -20,24 +19,18 @@ public sealed class DiagnosticsTool
     }
 
     [McpServerTool(Name = "lavender_get_diagnostics")]
-    [Description("Gets compiler diagnostics for the currently indexed C# project. Lavender indexes on project load; if unavailable, read source files directly.")]
+    [Description("Gets fresh compiler diagnostics independently of the semantic index. Refreshes after source/project changes and reuses results only for the same revision. Prefer one call after a coherent edit batch. Does not run the application.")]
     public async Task<DiagnosticsToolResult> GetDiagnosticsAsync(
         [Description("Maximum number of diagnostics to return. Defaults to 100 and is capped at 500.")]
         int limit = DefaultLimit,
 
         CancellationToken cancellationToken = default)
     {
-        if (!_state.IsProjectIndexed)
-        {
-            return DiagnosticsToolResult.Failed(_state.NotReadyMessage +
-                " Compiler validation is unavailable until reindexing; repeating this call will not refresh the index.");
-        }
-
         try
         {
-            IProjectKnowledgeService knowledge = _state.RequireKnowledgeService();
             int boundedLimit = Math.Clamp(limit, 1, MaxLimit);
-            IReadOnlyList<ProjectDiagnostic> diagnostics = await knowledge.GetDiagnosticsAsync(cancellationToken);
+            var snapshot = await _state.GetFreshDiagnosticsAsync(cancellationToken);
+            IReadOnlyList<ProjectDiagnostic> diagnostics = snapshot.Diagnostics;
 
             DiagnosticSummary[] results = diagnostics
                 .Take(boundedLimit)
@@ -46,8 +39,8 @@ public sealed class DiagnosticsTool
 
             return new DiagnosticsToolResult(
                 Success: true,
-                Message: $"Found {results.Length} diagnostic(s).",
-                Diagnostics: results);
+                Message: $"Showing {results.Length} of {diagnostics.Count} diagnostic(s). Compiler snapshot only; not a build or runtime test.",
+                Diagnostics: results, Revision: snapshot.Revision, Cached: snapshot.Cached, Warnings: snapshot.Warnings);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -64,7 +57,10 @@ public sealed record DiagnosticsToolResult(
     string Message,
 
     [property: JsonPropertyName("diagnostics")]
-    IReadOnlyList<DiagnosticSummary> Diagnostics)
+    IReadOnlyList<DiagnosticSummary> Diagnostics,
+    [property: JsonPropertyName("revision")] string? Revision = null,
+    [property: JsonPropertyName("cached")] bool Cached = false,
+    [property: JsonPropertyName("workspace_warnings")] IReadOnlyList<string>? Warnings = null)
 {
     public static DiagnosticsToolResult Failed(string message) =>
         new(

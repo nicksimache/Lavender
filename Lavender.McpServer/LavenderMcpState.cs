@@ -10,6 +10,7 @@ public sealed class LavenderMcpState : IDisposable
     private const int PollInterval = 100;
 
     private readonly ProjectIndexer _projectIndexer = new();
+    private readonly Lavender.Diagnostics.FreshDiagnosticsService _diagnostics = new();
     // Edits must not race indexing or each other; callers fail quickly instead of queuing stale operations.
     private readonly SemaphoreSlim _indexGate = new(1, 1);
     public string IndexId { get; private set; } = "";
@@ -42,6 +43,7 @@ public sealed class LavenderMcpState : IDisposable
             ProjectPath = Path.GetFullPath(projectPath);
             Assets = new AssetCatalog(ProjectPath);
             SolutionPath = Path.GetFullPath(solutionPath);
+            _diagnostics.Reset();
             IndexId = Guid.NewGuid().ToString("N");
             RequiresReindex = false;
             await _projectIndexer.IndexProjectAsync(projectPath, solutionPath, IndexId, cancellationToken);
@@ -116,6 +118,18 @@ public sealed class LavenderMcpState : IDisposable
                 throw new InvalidOperationException(NotReadyMessage);
             await Task.Delay(PollInterval, timeout.Token);
         }
+    }
+
+    public async Task<Lavender.Diagnostics.FreshDiagnosticsResult> GetFreshDiagnosticsAsync(CancellationToken token)
+    {
+        if (!await _indexGate.WaitAsync(0, token))
+            throw new InvalidOperationException("Indexing or an edit is running. Request diagnostics after it finishes.");
+        try
+        {
+            return await _diagnostics.GetAsync(ProjectPath ?? throw new InvalidOperationException("Open a project first."),
+                SolutionPath ?? throw new InvalidOperationException("No solution or project selected."), token);
+        }
+        finally { _indexGate.Release(); }
     }
 
     public void Dispose()

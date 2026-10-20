@@ -1,12 +1,24 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace Lavender.Infrastructure.FileSystem;
 
+public sealed record LineEdit(
+    [property: JsonPropertyName("startLine")] int StartLine,
+    [property: JsonPropertyName("endLine")] int EndLine,
+    [property: JsonPropertyName("replacementCode")] string ReplacementCode);
+public sealed record LineChange(
+    [property: JsonPropertyName("original_start_line")] int OriginalStartLine,
+    [property: JsonPropertyName("original_end_line")] int OriginalEndLine,
+    [property: JsonPropertyName("added_lines")] int AddedLines,
+    [property: JsonPropertyName("line_delta")] int LineDelta);
+
 public sealed record ProjectFileRead(string Path, string ContentHash, int LineCount, string Encoding, string Content);
-public sealed record ProjectFileEdit(string Path, string? DestinationPath, string? ContentHash, string? BackupPath, bool Changed);
+public sealed record ProjectFileEdit(string Path, string? DestinationPath, string? ContentHash, string? BackupPath, bool Changed,
+    IReadOnlyList<LineChange>? Changes = null);
 
 /// <summary>
 /// Project-scoped edits guarded by the hash returned by ReadAsync.
@@ -179,37 +191,63 @@ public sealed class ProjectFileEditor(string projectRoot, string? backupDirector
     public async Task<ProjectFileEdit> WriteLinesAsync(string path, int startLine, int endLine, string replacement,
         string expectedHash, CancellationToken token = default)
     {
-        ArgumentNullException.ThrowIfNull(replacement);
+        return await ApplyEditsAsync(path, [new(startLine, endLine, replacement)], expectedHash, token);
+    }
+
+    public async Task<ProjectFileEdit> ApplyEditsAsync(string path, IReadOnlyList<LineEdit> edits,
+        string expectedHash, CancellationToken token = default)
+    {
+        if (edits is null || edits.Count is < 1 or > 100 || edits.Any(edit => edit is null))
+            throw new ArgumentException("Supply between 1 and 100 edits.");
         byte[] bytes = await BytesAsync(path, token);
         Verify(bytes, expectedHash);
         var (text, encoding, preamble) = Decode(bytes);
         var starts = LineStarts(text);
-        // Tool ranges are one-based and inclusive; an empty range represents an insertion.
-        bool insertion = endLine == startLine - 1;
-        if (startLine < 1 || startLine > starts.Count + (insertion ? 1 : 0) || endLine < startLine - 1 || endLine > starts.Count)
-            throw new ArgumentException($"Invalid range. File has {starts.Count} lines. Use inclusive one-based lines, or endLine = startLine - 1 to insert.");
-        int from = startLine <= starts.Count ? starts[startLine - 1] : text.Length;
-        int to = insertion ? from : endLine < starts.Count ? starts[endLine] : text.Length;
-
-        // Match the existing newline style and preserve boundaries around untouched text.
-        string newline = Regex.Match(text, "\\r\\n|\\r|\\n") is { Success: true } match ? match.Value : "\n";
-        string added = replacement.ReplaceLineEndings(newline);
-        if (added.Length > 0)
+        var ordered = edits.OrderBy(e => e.StartLine).ToArray();
+        int previousEnd = 0;
+        foreach (var edit in ordered)
         {
-            bool needsEnding = to < text.Length || (!insertion && to > from && (text[to - 1] is '\n' or '\r'))
-                || (insertion && from == text.Length && from > 0 && (text[^1] is '\n' or '\r'));
-            if (needsEnding && !(added.EndsWith('\n') || added.EndsWith('\r')))
-                added += newline;
-            if (insertion && from == text.Length && from > 0 && !(text[^1] is '\n' or '\r'))
-                added = newline + added;
+            ArgumentNullException.ThrowIfNull(edit.ReplacementCode);
+            SourceWriteGuard.Validate(edit.ReplacementCode);
+            bool insertion = edit.EndLine == edit.StartLine - 1;
+            if (edit.StartLine < 1 || edit.StartLine > starts.Count + (insertion ? 1 : 0)
+                || edit.EndLine < edit.StartLine - 1 || edit.EndLine > starts.Count)
+                throw new ArgumentException($"Invalid range; file has {starts.Count} lines.");
+            if (edit.StartLine <= previousEnd)
+                throw new ArgumentException("Edits overlap or share an insertion boundary. Combine them first.");
+            if (insertion && edit.StartLine == starts.Count + 1 && previousEnd == starts.Count && previousEnd > 0)
+                throw new ArgumentException("Combine the final-line replacement and end-of-file insertion into one edit to preserve their newline boundary.");
+            previousEnd = Math.Max(edit.StartLine, edit.EndLine);
         }
-        string updated = text[..from] + added + text[to..];
+        string newline = Regex.Match(text, "\r\n|\r|\n") is { Success: true } match ? match.Value : "\n";
+        string updated = text;
+        List<LineChange> changes = [];
+        foreach (var edit in ordered.Reverse())
+        {
+            bool insertion = edit.EndLine == edit.StartLine - 1;
+            int from = edit.StartLine <= starts.Count ? starts[edit.StartLine - 1] : text.Length;
+            int to = insertion ? from : edit.EndLine < starts.Count ? starts[edit.EndLine] : text.Length;
+            string added = edit.ReplacementCode.ReplaceLineEndings(newline);
+            bool prefixNewline = false;
+            if (added.Length > 0)
+            {
+                bool needsEnding = to < text.Length || (!insertion && to > from && (text[to - 1] is '\n' or '\r'))
+                    || (insertion && from == text.Length && from > 0 && (text[^1] is '\n' or '\r'));
+                if (needsEnding && !(added.EndsWith('\n') || added.EndsWith('\r'))) added += newline;
+                if (insertion && from == text.Length && from > 0 && !(text[^1] is '\n' or '\r'))
+                { added = newline + added; prefixNewline = true; }
+            }
+            int addedLines = LineStarts(added).Count - (prefixNewline ? 1 : 0);
+            changes.Add(new(edit.StartLine, edit.EndLine, addedLines,
+                addedLines - (insertion ? 0 : edit.EndLine - edit.StartLine + 1)));
+            updated = updated[..from] + added + updated[to..];
+        }
         if (updated == text)
             return new(path, null, Hash(bytes), null, false);
         byte[] updatedBytes = preamble.Concat(encoding.GetBytes(updated)).ToArray();
         if (updatedBytes.Length > MaxBytes)
             throw new IOException("Result exceeds the 4 MiB tool limit.");
-        string backup = await BackupAsync(path, bytes, "write_lines", null, token);
+        string backup = await BackupAsync(path, bytes, "apply_edits", null, token);
         string target = Resolve(path);
         string temporary = Path.Combine(Path.GetDirectoryName(target)!, $".lavender-edit-{Guid.NewGuid():N}.tmp");
         bool owned = false;
@@ -227,7 +265,7 @@ public sealed class ProjectFileEditor(string projectRoot, string? backupDirector
             // The backup already exists; replacement publishes the completed file in one operation.
             File.Replace(temporary, Resolve(path), destinationBackupFileName: null);
             owned = false;
-            return new(path, null, Hash(updatedBytes), backup, true);
+            return new(path, null, Hash(updatedBytes), backup, true, changes.OrderBy(c => c.OriginalStartLine).ToArray());
         }
         finally
         {

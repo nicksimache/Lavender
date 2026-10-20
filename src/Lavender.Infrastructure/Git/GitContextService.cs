@@ -81,7 +81,7 @@ public sealed class GitContextService
             return new()
             {
                 IsRepository = false,
-                Error = root.Error.Trim()
+                Error = ShortError(root.Error)
             };
         }
 
@@ -95,7 +95,7 @@ public sealed class GitContextService
             {
                 IsRepository = true,
                 RepositoryRoot = repo,
-                Error = status.Error.Trim()
+                Error = ShortError(status.Error)
             };
         }
 
@@ -118,6 +118,10 @@ public sealed class GitContextService
 
     private async Task<GitDiffResult> GetDiffAsync(bool staged, string? file, CancellationToken token)
     {
+        CommandResult root = await RunAsync(new[] { "rev-parse", "--show-toplevel" }, token);
+        if (root.StartError is not null || root.ExitCode != 0)
+            return new() { RequestedFile = file, IsStaged = staged, ExitCode = root.ExitCode,
+                Error = root.StartError ?? ShortError(root.Error) };
         var args = new List<string> { "diff", "--no-ext-diff", "--no-textconv", "--no-color" };
 
         if (staged)
@@ -144,7 +148,6 @@ public sealed class GitContextService
         }
 
         CommandResult command = await RunAsync(args, token);
-        CommandResult root = await RunAsync(new[] { "rev-parse", "--show-toplevel" }, token);
 
         return new()
         {
@@ -153,7 +156,7 @@ public sealed class GitContextService
             IsStaged = staged,
             UnifiedDiff = command.Output,
             ExitCode = command.ExitCode,
-            Error = command.StartError ?? (command.ExitCode == 0 ? null : command.Error.Trim())
+            Error = command.StartError ?? (command.ExitCode == 0 ? null : ShortError(command.Error))
         };
     }
 
@@ -347,6 +350,13 @@ public sealed class GitContextService
             return candidate;
         }
         return "git";
+    }
+
+    private static string ShortError(string error)
+    {
+        string first = error.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()
+            ?? "Git command failed without an error message.";
+        return first.Length <= 600 ? first : first[..600] + "…";
     }
 
     private sealed record CommandResult(int ExitCode, string Output, string Error, string? StartError);

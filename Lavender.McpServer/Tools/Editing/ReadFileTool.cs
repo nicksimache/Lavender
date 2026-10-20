@@ -25,10 +25,10 @@ public sealed class ReadFileTool(LavenderMcpState state)
             {
                 string[] lines = content.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
                 int start = startLine ?? 1;
-                int end = endLine ?? lines.Length;
-                if (start < 1 || end < start || start > lines.Length)
+                int end = endLine ?? read.LineCount;
+                if (start < 1 || end < start || start > read.LineCount)
                     throw new ArgumentOutOfRangeException(nameof(startLine), "Specify a valid 1-based inclusive line range.");
-                end = Math.Min(end, lines.Length);
+                end = Math.Min(end, read.LineCount);
                 returnedStart = start;
                 returnedEnd = end;
                 content = string.Join("\n", lines.Skip(start - 1).Take(end - start + 1));
