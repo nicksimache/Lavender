@@ -1550,3 +1550,4 @@ C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\api-tracking-probe\z
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\api-tracking-probe\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.Messages.dll
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\api-tracking-probe\runtimes\win\lib\net8.0\System.Diagnostics.EventLog.dll
 C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\artifacts\api-tracking-probe\runtimes\browser\lib\net8.0\System.Text.Encodings.Web.dll
+C:\Users\nicks\OneDrive\Desktop\lavender\Lavender\obj\Debug\net8.0-windows\GeneratedInternalTypeHelper.g.cs

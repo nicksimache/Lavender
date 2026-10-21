@@ -284,7 +284,7 @@ namespace Lavender.App
             if (!_ready || _busy || _indexing)
             {
                 _pendingProject = (selectedPath, solutionOrProjectPath);
-                OpenProjectButton.Content = "Folder queued…";
+                OpenProjectLabel.Text = "Project queued…";
                 OpenProjectButton.ToolTip = $"Will open {selectedPath} when the current operation finishes. Click to choose another folder.";
                 AgentStatusText.Text = $"Queued: {Path.GetFileName(selectedPath)}";
                 return;
@@ -319,7 +319,8 @@ namespace Lavender.App
         private async Task OpenProjectAsync(
             string selectedPath,
             string solutionOrProjectPath,
-            bool alreadyDisplayed = false)
+            bool alreadyDisplayed = false,
+            Conversation? conversation = null)
         {
             bool chatReleased = false;
             try
@@ -328,7 +329,7 @@ namespace Lavender.App
                 _indexing = true;
                 if (!alreadyDisplayed)
                 {
-                    await DisplayProjectAsync(selectedPath, solutionOrProjectPath);
+                    await DisplayProjectAsync(selectedPath, solutionOrProjectPath, conversation);
                 }
 
                 AgentStatusText.Text = $"Indexing {Path.GetFileName(selectedPath)} — chat available";
@@ -361,7 +362,7 @@ namespace Lavender.App
             }
         }
 
-        private async Task DisplayProjectAsync(string selectedPath, string solutionOrProjectPath)
+        private async Task DisplayProjectAsync(string selectedPath, string solutionOrProjectPath, Conversation? conversation = null)
         {
             _openFileRequest?.Cancel();
             if (!Directory.Exists(selectedPath) || !File.Exists(solutionOrProjectPath))
@@ -386,14 +387,19 @@ namespace Lavender.App
             rootItem.IsExpanded = true;
             _projectScanner = new ProjectScanner(selectedPath);
             _projectSearchService = new ProjectSearchService(_projectScanner);
-            OpenProjectButton.Content = "Change folder";
+            OpenProjectLabel.Text = "Open project";
             OpenProjectButton.ToolTip = _selectedProjectPath;
-            ConversationPicker.ToolTip = $"Chat history for {_selectedProjectPath}";
+            ConversationPicker.ToolTip = $"Previous chats for {_selectedProjectPath}";
             _activeConversationId = Guid.Empty;
             ChatMessagesPanel.Children.Clear();
             contextFiles.Clear();
             UpdateContextDisplay();
-            await RestoreProjectChatAsync();
+            if (conversation is null) await RestoreProjectChatAsync();
+            else
+            {
+                ShowConversation(conversation);
+                await RefreshHistoryAsync();
+            }
             if (preferenceError is not null)
                 AddMessageBubble($"Project opened, but its startup preference could not be saved: {preferenceError}", false);
         }
@@ -700,7 +706,7 @@ namespace Lavender.App
                 Background = new SolidColorBrush(Color.FromRgb(76, 58, 105)),
                 BorderThickness = new Thickness(0),
                 CornerRadius = new CornerRadius(12),
-                Padding = new Thickness(11, 8, 11, 8),
+                Padding = new Thickness(14, 11, 14, 11),
                 Margin = new Thickness(0, 0, 2, 14),
                 HorizontalAlignment = HorizontalAlignment.Right,
                 Tag = "UserMessage"
@@ -719,7 +725,7 @@ namespace Lavender.App
                 IsDocumentEnabled = true,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(0),
+                Padding = new Thickness(8, 6, 8, 6),
                 VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
@@ -834,7 +840,7 @@ namespace Lavender.App
             _refreshingHistory = true;
             try
             {
-                var history = await _conversations.ListAsync(_selectedProjectPath);
+                var history = await _conversations.ListAsync(_selectedProjectPath, _windowLifetime.Token);
                 ConversationPicker.ItemsSource = history;
                 ConversationPicker.SelectedItem = history.FirstOrDefault(c => c.Id == _activeConversationId);
             }
@@ -869,13 +875,18 @@ namespace Lavender.App
         {
             if (_refreshingHistory || _busy || !_ready)
                 return;
-            if (ConversationPicker.SelectedItem is Conversation chat)
+            if (ConversationPicker.SelectedItem is Conversation chat && chat.Id != _activeConversationId &&
+                string.Equals(JsonConversationStore.NormalizeProjectPath(chat.ProjectPath),
+                    JsonConversationStore.NormalizeProjectPath(_selectedProjectPath), StringComparison.OrdinalIgnoreCase))
                 ShowConversation(chat);
         }
 
         private async void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
             if (!_ready || _busy)
+                return;
+            if (MessageBox.Show("Delete all saved chats for the currently open project?", "Clear project chats",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
             try
             {
@@ -1149,6 +1160,16 @@ namespace Lavender.App
 
         #region Editor tabs, saving, and highlighting
 
+        private void CodeWorkspace_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            // Keep the fixed-width explorer from pushing the editor past its container
+            // when the user narrows the window or drags the chat/workspace divider.
+            if (ExplorerColumn is null || CodeEditorColumn is null || e.NewSize.Width <= 0)
+                return;
+            ExplorerColumn.MaxWidth = Math.Max(ExplorerColumn.MinWidth,
+                e.NewSize.Width - 6 - CodeEditorColumn.MinWidth);
+        }
+
         private void AgentEditorSplitter_DragDelta(object sender, System.Windows.Controls.Primitives.DragDeltaEventArgs e)
         {
             ResizeAgentEditor(e.HorizontalChange);
@@ -1191,7 +1212,7 @@ namespace Lavender.App
                 }
             };
             FilePreviewBox.Options.HighlightCurrentLine = true;
-            FilePreviewBox.TextArea.TextView.CurrentLineBackground = new SolidColorBrush(Color.FromRgb(21, 21, 21));
+            FilePreviewBox.TextArea.TextView.CurrentLineBackground = new SolidColorBrush(Color.FromRgb(22, 22, 22));
             FilePreviewBox.TextArea.TextView.CurrentLineBorder = new Pen(Brushes.Transparent, 0);
             FilePreviewBox.TextArea.SelectionBorder = new Pen(Brushes.Transparent, 0);
             FilePreviewBox.TextArea.SelectionBrush = new SolidColorBrush(Color.FromRgb(58, 45, 76));

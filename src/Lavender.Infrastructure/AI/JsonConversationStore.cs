@@ -94,9 +94,15 @@ public sealed class JsonConversationStore : IConversationStore
     private string GetPath(Guid id) =>
         Path.Combine(_directory, $"{id:N}.json");
 
-    public async Task<IReadOnlyList<Conversation>> ListAsync(
+    public Task<IReadOnlyList<Conversation>> ListAllAsync(CancellationToken cancellationToken = default) =>
+        ListCoreAsync(null, true, cancellationToken);
+
+    public Task<IReadOnlyList<Conversation>> ListAsync(
         string? projectPath,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) => ListCoreAsync(projectPath, false, cancellationToken);
+
+    private async Task<IReadOnlyList<Conversation>> ListCoreAsync(
+        string? projectPath, bool allProjects, CancellationToken cancellationToken)
     {
         projectPath = NormalizeProjectPath(projectPath);
         if (_persist && Directory.Exists(_directory))
@@ -116,7 +122,7 @@ public sealed class JsonConversationStore : IConversationStore
         await _fileLock.WaitAsync(cancellationToken);
         try
         {
-            return _memory.Values.Where(c => string.Equals(NormalizeProjectPath(c.ProjectPath), projectPath,
+            return _memory.Values.Where(c => allProjects || string.Equals(NormalizeProjectPath(c.ProjectPath), projectPath,
                 StringComparison.OrdinalIgnoreCase)).OrderByDescending(c => c.UpdatedAt).ToArray();
         }
         finally

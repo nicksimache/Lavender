@@ -25,10 +25,11 @@
     </Window.InputBindings>
 
     <Window.Resources>
+        <converters:ExplorerIndentConverter x:Key="ExplorerIndentConverter"/>
         <SolidColorBrush x:Key="AppBackground" Color="#181818"/>
-        <SolidColorBrush x:Key="PanelBackground" Color="#1F1F1F"/>
+        <SolidColorBrush x:Key="PanelBackground" Color="#101010"/>
         <SolidColorBrush x:Key="SidebarBackground" Color="#181818"/>
-        <SolidColorBrush x:Key="EditorBackground" Color="#1E1E1E"/>
+        <SolidColorBrush x:Key="EditorBackground" Color="#0D0D0D"/>
         <SolidColorBrush x:Key="InputBackground" Color="#242424"/>
         <SolidColorBrush x:Key="BorderBrush" Color="#2B2B2B"/>
         <SolidColorBrush x:Key="MutedTextBrush" Color="#8F8F8F"/>
@@ -49,7 +50,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="GridSplitter">
-                        <Border Background="{TemplateBinding Background}"/>
+                        <Grid Background="Transparent"><Border Width="1" HorizontalAlignment="Center" Background="{TemplateBinding Background}"/></Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
@@ -95,6 +96,16 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <Style x:Key="SidebarAction" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,9"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Style.Triggers><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger></Style.Triggers>
         </Style>
 
         <Style x:Key="AccentButton" TargetType="Button">
@@ -232,7 +243,7 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <ScrollContentPresenter Grid.Row="0"
+                            <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Grid.Row="0"
                                                     Grid.Column="0"
                                                     Margin="{TemplateBinding Padding}"
                                                     CanContentScroll="{TemplateBinding CanContentScroll}"
@@ -264,17 +275,20 @@
         </Style>
 
         <Style TargetType="{x:Type TreeViewItem}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Foreground" Value="#C8C8C8"/>
             <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="ToolTip" Value="{Binding Tag, RelativeSource={RelativeSource Self}}"/>
             <Setter Property="IsExpanded" Value="False"/>
             <Setter Property="HeaderTemplate">
                 <Setter.Value>
                     <DataTemplate>
-                        <StackPanel Orientation="Horizontal" Height="24">
+                        <StackPanel Orientation="Horizontal" Height="20">
                             <Image Width="16"
                                    Height="16"
-                                   Margin="2,0,6,0"
+                                   Margin="0,0,4,0"
                                    VerticalAlignment="Center"
                                    Source="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TreeViewItem}},
                                                     Path=Tag,
@@ -291,7 +305,7 @@
                                 </Image.Style>
                             </Image>
                             <TextBlock VerticalAlignment="Center"
-                                       Margin="0,0,12,0"
+                                       Margin="0,0,3,0"
                                        Foreground="{Binding RelativeSource={RelativeSource Mode=FindAncestor, AncestorType={x:Type TreeViewItem}},
                                                             Path=Foreground}"
                                        Text="{Binding}"/>
@@ -299,15 +313,67 @@
                     </DataTemplate>
                 </Setter.Value>
             </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{StaticResource SelectionBrush}"/>
-                    <Setter Property="Foreground" Value="White"/>
-                </Trigger>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#292929"/>
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TreeViewItem}">
+                        <StackPanel>
+                            <!-- Children stay full width; only each header's content is indented. -->
+                            <Border x:Name="ExplorerRow" Background="Transparent" CornerRadius="4"
+                                    Margin="2,0" Padding="2,0" ClipToBounds="True">
+                                <Grid>
+                                    <Grid.Margin>
+                                        <MultiBinding Converter="{StaticResource ExplorerIndentConverter}">
+                                            <Binding Path="Tag" RelativeSource="{RelativeSource TemplatedParent}"/>
+                                            <Binding Path="Items[0].Tag" RelativeSource="{RelativeSource AncestorType={x:Type TreeView}}"/>
+                                        </MultiBinding>
+                                    </Grid.Margin>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="14"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleButton x:Name="Expander" Focusable="False" ClickMode="Press"
+                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border Background="Transparent">
+                                                    <Path x:Name="Arrow" Data="M 0 0 L 3 3 L 0 6" Stroke="#888888"
+                                                          StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                          RenderTransformOrigin="0.5,0.5"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter TargetName="Arrow" Property="RenderTransform">
+                                                            <Setter.Value><RotateTransform Angle="90"/></Setter.Value>
+                                                        </Setter>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                    <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header"
+                                                      HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
+                                </Grid>
+                            </Border>
+                            <ItemsPresenter x:Name="ItemsHost" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsExpanded" Value="True">
+                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                            </Trigger>
+                            <Trigger SourceName="ExplorerRow" Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ExplorerRow" Property="Background" Value="#141414"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ExplorerRow" Property="Background" Value="#0D0D0D"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
@@ -352,109 +418,142 @@
                 <StackPanel Grid.Column="1"
                             Orientation="Horizontal"
                             VerticalAlignment="Center"
-                            Margin="12,0,0,0">
+                            Margin="12,0,0,0" HorizontalAlignment="Center">
                     <TextBlock Text="File" Margin="0,0,18,0" Foreground="#BEBEBE" FontSize="12"/>
                     <TextBlock Text="Edit" Margin="0,0,18,0" Foreground="#BEBEBE" FontSize="12"/>
                     <TextBlock Text="View" Margin="0,0,18,0" Foreground="#BEBEBE" FontSize="12"/>
                     <TextBlock Text="Help" Foreground="#BEBEBE" FontSize="12"/>
-                    <Button Content="Save" Margin="16,0,0,0" Padding="10,2"
-                            Command="ApplicationCommands.Save"
-                            CommandTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
-                            ToolTip="Save current file (Ctrl+S)"/>
                 </StackPanel>
 
-                <TextBlock Grid.Column="2"
+                <TextBlock Grid.Column="0" Grid.ColumnSpan="4" IsHitTestVisible="False"
                            Text="Lavender"
                            Foreground="#909090"
                            FontSize="12"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"/>
 
-                <TextBlock Grid.Column="3"
-                           Text="Code workspace"
-                           Foreground="#6F6F6F"
-                           FontSize="11"
-                           VerticalAlignment="Center"/>
+
             </Grid>
         </Border>
 
         <Grid x:Name="WorkspacePanels" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="240" MinWidth="160"/>
+                <ColumnDefinition Width="180" MinWidth="140"/>
                 <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="*" MinWidth="320"/>
+                <ColumnDefinition Width="*" MinWidth="280"/>
                 <ColumnDefinition Width="6"/>
-                <ColumnDefinition Width="*" MinWidth="240"/>
+                <ColumnDefinition Width="1.3*" MinWidth="346"/>
             </Grid.ColumnDefinitions>
 
+            <!-- Project conversations -->
+            <Grid Grid.Column="0" Background="{StaticResource SidebarBackground}" ClipToBounds="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="8,10,8,12">
+                    <Button x:Name="NewChatButton" Style="{StaticResource SidebarAction}" Click="NewChat_Click"
+                            ToolTip="Start a chat in the current project" AutomationProperties.Name="New chat">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Width="15" Height="15" Margin="0,0,10,0" Stretch="Uniform" Stroke="White" StrokeThickness="1.5"
+                                  Data="M 3,8 L 3,18 L 17,18 L 17,12 M 7,12 L 8,8 L 17,0 L 20,3 L 11,12 Z"/>
+                            <TextBlock Text="New chat" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="OpenProjectButton" Style="{StaticResource SidebarAction}" Click="OpenProject_Click"
+                            Margin="0,4,0,0" AutomationProperties.Name="Open project">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Width="16" Height="14" Margin="0,0,9,0" Stretch="Uniform" Stroke="White" StrokeThickness="1.5"
+                                  Data="M 1,5 L 1,2 L 8,2 L 11,5 L 20,5 L 20,17 L 1,17 Z M 1,8 L 20,8"/>
+                            <TextBlock x:Name="OpenProjectLabel" Text="Open project" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                <ListBox x:Name="ConversationPicker" Grid.Row="1" Background="Transparent" BorderThickness="0"
+                         Margin="6,0" Foreground="White" SelectionChanged="ConversationPicker_SelectionChanged"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         HorizontalContentAlignment="Stretch" ToolTip="Previous chats for the current project">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="8,7"/>
+                            <Setter Property="Margin" Value="0,1"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#DEDEDE"/>
+                            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                                <Border x:Name="ChatRow" Background="{TemplateBinding Background}" CornerRadius="5" Padding="{TemplateBinding Padding}">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ChatRow" Property="Background" Value="#262626"/></Trigger>
+                                    <Trigger Property="IsSelected" Value="True"><Setter TargetName="ChatRow" Property="Background" Value="#303030"/></Trigger>
+                                    <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ChatRow" Property="Background" Value="#303030"/></Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate></Setter.Value></Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate><DataTemplate>
+                        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" FontSize="12" ToolTip="{Binding Title}"/>
+                    </DataTemplate></ListBox.ItemTemplate>
+                </ListBox>
+                <Button x:Name="ClearHistoryButton" Grid.Row="2" Content="Clear project chats" Click="ClearHistory_Click"
+                        Style="{StaticResource SidebarAction}" Margin="8" FontSize="11"
+                        ToolTip="Delete saved chats for the currently open project"/>
+            </Grid>
+
+            <Grid Grid.Column="4" x:Name="CodeWorkspace" SizeChanged="CodeWorkspace_SizeChanged">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="ExplorerColumn" Width="180" MinWidth="120"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition x:Name="CodeEditorColumn" Width="*" MinWidth="220"/>
+                </Grid.ColumnDefinitions>
             <!-- Explorer -->
             <Border Grid.Column="0"
                     Background="{StaticResource SidebarBackground}"
                     BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="0,0,1,0">
+                    BorderThickness="0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="36"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="42"/>
                     </Grid.RowDefinitions>
 
-                    <Grid Grid.Row="0" Margin="14,0,10,0">
+                    <Grid Grid.Row="0" Margin="8,0,8,0">
                         <TextBlock Text="EXPLORER"
                                    Foreground="#BBBBBB"
                                    FontSize="11"
                                    VerticalAlignment="Center"/>
-                        <TextBlock Text="•••"
-                                   Foreground="#8C8C8C"
-                                   FontSize="13"
-                                   HorizontalAlignment="Right"
-                                   VerticalAlignment="Center"/>
                     </Grid>
-
-                    <Button x:Name="OpenProjectButton"
-                            Grid.Row="1"
-                            Style="{StaticResource AccentButton}"
-                            Content="Open Folder"
-                            Height="30"
-                            Margin="12,2,12,10"
-                            Click="OpenProject_Click"/>
 
                     <TreeView x:Name="FolderView"
                               Grid.Row="2"
                               Background="Transparent"
                               BorderThickness="0"
-                              Padding="4,0"
+                              Padding="0"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                              ScrollViewer.CanContentScroll="True"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              ScrollViewer.CanContentScroll="False"
+                              ClipToBounds="True"
                               SelectedItemChanged="FolderView_SelectedItemChanged"
                               PreviewMouseMove="FolderView_PreviewMouseMove">
                         <TreeView.Resources>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#332A46"/>
-                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#292433"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#0D0D0D"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#0D0D0D"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#E8E0F3"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#CFC7DC"/>
                             <Style TargetType="{x:Type ScrollViewer}" BasedOn="{StaticResource DarkScrollViewerStyle}"/>
                         </TreeView.Resources>
                     </TreeView>
 
-                    <Border Grid.Row="3"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="0,1,0,0">
-                        <Button Content="⚙  Settings"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                HorizontalContentAlignment="Left"
-                                Margin="4,4"/>
-                    </Border>
                 </Grid>
             </Border>
 
             <!-- Editor -->
-            <Grid Grid.Column="4" Background="{StaticResource EditorBackground}">
+            <Grid Grid.Column="2" Background="{StaticResource EditorBackground}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="36"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
@@ -462,17 +561,51 @@
                         Background="#181818"
                         BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="0,0,0,1">
-                    <ListBox x:Name="OpenFileTabs" Background="Transparent" BorderThickness="0"
+                    <ListBox x:Name="OpenFileTabs" Background="Transparent" BorderThickness="0" Padding="0"
+                             MaxHeight="108" HorizontalContentAlignment="Stretch"
                              SelectionChanged="OpenFileTabs_SelectionChanged"
-                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
-                        <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.CanContentScroll="False">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="7,4"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="MaxWidth" Value="160"/>
+                                <Setter Property="Foreground" Value="#AFAFAF"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                                <Setter Property="Template"><Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="TabBorder" Background="{TemplateBinding Background}"
+                                                BorderThickness="0" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="TabBorder" Property="Background" Value="#252525"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="TabBorder" Property="Background" Value="#101010"/>
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value></Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate><DataTemplate>
-                            <StackPanel Orientation="Horizontal" ToolTip="{Binding FullPath}" Margin="10,5">
-                                <Image Width="16" Height="16" Margin="0,0,6,0"
+                            <Grid ToolTip="{Binding FullPath}">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                <Image Width="12" Height="12" Margin="0,0,4,0" VerticalAlignment="Center"
                                        Source="{Binding FullPath, Converter={x:Static converters:HeaderToImageConverter.Instance}}"/>
-                                <TextBlock Text="{Binding Header}" Foreground="#D4D4D4"/>
-                            </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding Header}" FontSize="11" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                            </Grid>
                         </DataTemplate></ListBox.ItemTemplate>
                     </ListBox>
                 </Border>
@@ -484,7 +617,7 @@
                                    BorderThickness="0"
                                    Padding="8,9"
                                    FontFamily="Cascadia Mono"
-                                   FontSize="13"
+                                   FontSize="11"
                                    ShowLineNumbers="True"
                                    LineNumbersForeground="#858585"
                                    WordWrap="False"
@@ -522,6 +655,10 @@
                 </Border>
             </Grid>
 
+                <GridSplitter Grid.Column="1" Style="{StaticResource WorkspaceSplitter}"
+                              ToolTip="Resize explorer and code" AutomationProperties.Name="Resize explorer and code"/>
+            </Grid>
+
             <!-- Assistant -->
             <Grid Grid.Column="2"
                   Background="{StaticResource PanelBackground}"
@@ -536,7 +673,7 @@
 
                 <Border Grid.Row="0"
                         BorderBrush="{StaticResource BorderBrush}"
-                        BorderThickness="1,0,0,1"
+                        BorderThickness="0,0,0,1"
                         Padding="14,0">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -544,18 +681,9 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <DockPanel Margin="0,4">
-                            <Button x:Name="NewChatButton" DockPanel.Dock="Right" Content="New chat" Click="NewChat_Click" Padding="6,3"/>
-                            <ComboBox x:Name="ConversationPicker" DisplayMemberPath="Title" MinWidth="100"
-                                      Margin="0,0,8,0" SelectionChanged="ConversationPicker_SelectionChanged"
-                                      ToolTip="Saved conversations for the open project"/>
-                        </DockPanel>
-                        <DockPanel Grid.Row="1" Margin="0,0,0,4">
+                        <DockPanel Grid.Row="1" Margin="0,8,0,6">
                             <Button DockPanel.Dock="Right" Content="Timings" Padding="4,1" FontSize="10"
                                     Click="OpenTimings_Click" ToolTip="Open the indexing timing reports folder"/>
-                            <Button x:Name="ClearHistoryButton" DockPanel.Dock="Right" Content="Dev: Clear history"
-                                    Padding="4,1" FontSize="10" Click="ClearHistory_Click"
-                                    ToolTip="Delete all saved chats and memory for the current project only"/>
                             <TextBlock x:Name="AgentStatusText" Text="Starting…" FontSize="11"
                                        Foreground="{StaticResource MutedTextBrush}" TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
@@ -599,7 +727,7 @@
                                    Text="Context: No file selected"
                                    Foreground="{StaticResource MutedTextBrush}"
                                    FontSize="11"
-                                   Margin="2,0,6,0" VerticalAlignment="Center"
+                                   Margin="0,0,4,0" VerticalAlignment="Center"
                                    TextTrimming="CharacterEllipsis"/>
                         </DockPanel>
 
@@ -708,8 +836,8 @@
                 </Border>
             </Grid>
             <GridSplitter Grid.Column="1" Style="{StaticResource WorkspaceSplitter}"
-                          ToolTip="Drag to resize explorer and agent"
-                          AutomationProperties.Name="Resize explorer and agent"/>
+                          ToolTip="Drag to resize chat history and chat"
+                          AutomationProperties.Name="Resize chat history and chat"/>
             <Thumb Grid.Column="3" Cursor="SizeWE" Focusable="True"
                    DragDelta="AgentEditorSplitter_DragDelta"
                    KeyDown="AgentEditorSplitter_KeyDown"
@@ -721,7 +849,7 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="Thumb">
-                                    <Border Background="{TemplateBinding Background}"/>
+                                    <Grid Background="Transparent"><Border Width="1" HorizontalAlignment="Center" Background="{TemplateBinding Background}"/></Grid>
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
