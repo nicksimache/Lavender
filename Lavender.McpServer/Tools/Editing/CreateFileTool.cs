@@ -16,7 +16,10 @@ public sealed class CreateFileTool(LavenderMcpState state)
         try
         {
             string created = await state.CreateFileAsync(path, content, cancellationToken);
-            return new(true, true, "created", $"Created {created}. The project index is now stale; read source directly.", created);
+            int lines = content.Length == 0 ? 0 : System.Text.RegularExpressions.Regex.Matches(content, @"\r\n|\r|\n").Count
+                + (content.EndsWith('\n') || content.EndsWith('\r') ? 0 : 1);
+            return new(true, true, "created", $"Created {created}. The project index is now stale; read source directly.", created,
+                LineChanges: [new Lavender.Infrastructure.FileSystem.LineChange(1, 0, lines, lines)]);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or NotSupportedException)
         {

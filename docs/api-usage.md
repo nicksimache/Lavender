@@ -1,5 +1,15 @@
 # API usage tracking
 
+New chats make one bounded title-generation attempt on their first prompt using
+`Agent:ChatTitleModel` (default `gpt-4.1-mini`, using `OPENAI_API_KEY`). This is
+separate from the selected coding model and logged with trigger `conversation_title`.
+Only the first 4,000 prompt characters are sent, with no tools/source attachments
+and an output limit of 64 tokens. Naming runs before the coding loop with a
+10-second timeout. Failure retains the original prompt-based fallback title and
+does not block the coding task. The attempted flag and generated title persist;
+follow-ups and reopened chats do not trigger repeated naming. SDK HTTP retries,
+if any, remain individually tracked. Existing chats are not retrospectively named.
+
 Tracking is enabled automatically. Restart Lavender after building.
 Logs are local JSONL files in `%LOCALAPPDATA%\Lavender\ApiUsage`, split by
 process and UTC date. Set `LAVENDER_API_LOG_DIRECTORY` before launching to

@@ -45,6 +45,10 @@
 	<ItemGroup>
 		<Compile Remove="Lavender.McpServer\**\*.cs" />
         <Compile Remove="tests\**\*.cs" />
+        <Compile Remove="artifacts\**\*.cs" />
+        <Compile Remove="integrations\**\*.cs" />
+        <None Include="integrations\**\*.cs" />
+        <Compile Include="integrations\unity\Bridge\UnityBridgeProtocol.cs" />
 		<EmbeddedResource Remove="Lavender.McpServer\**\*" />
 		<None Remove="Lavender.McpServer\**\*" />
 	</ItemGroup>

@@ -7,6 +7,7 @@ namespace Lavender.Application.Agent;
 public sealed class AgentSettings
 {
     public string Model { get; init; } = "gpt-6-luna";
+    public string ChatTitleModel { get; init; } = "gpt-4.1-mini";
     public List<AgentModelOption> Models { get; init; } =
     [
         new() { Label = "GPT-4.1 mini", Id = "gpt-4.1-mini" },
@@ -47,7 +48,7 @@ public sealed class AgentSettings
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(Model))
+        if (string.IsNullOrWhiteSpace(Model) || string.IsNullOrWhiteSpace(ChatTitleModel))
         {
             throw new InvalidOperationException("Agent:Model must be configured.");
         }

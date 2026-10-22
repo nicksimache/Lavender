@@ -1,0 +1,6 @@
+{
+  "name": "Lavender.UnityBridge.Editor",
+  "rootNamespace": "Lavender.UnityBridge",
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}

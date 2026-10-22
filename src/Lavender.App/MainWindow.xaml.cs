@@ -111,6 +111,11 @@ namespace Lavender.App
                     EditorLoadingOverlay.Visibility = loading ? Visibility.Visible : Visibility.Collapsed;
                 });
             OpenFileTabs.ItemsSource = _openFiles;
+            _editorAssistance.DiagnosticsChanged += (items, status) =>
+            {
+                ProblemsList.ItemsSource = items;
+                ProblemsStatus.Text = status;
+            };
 
             AgentSettings settings = AgentSettings.Load();
             settings.Validate();
@@ -124,8 +129,8 @@ namespace Lavender.App
 
             _agentRunner.Progress += status => Dispatcher.InvokeAsync(() =>
             {
-                AgentStatusText.Text = status;
-                AppendAgentActivity(status);
+                AgentStatusText.Text = "Agent running";
+                ShowAgentProgress(status);
             });
             _agentRunner.ResponseDelta += delta =>
             {
@@ -160,6 +165,17 @@ namespace Lavender.App
             // Paint the loading screen before restoring the explorer and starting services.
             await System.Windows.Threading.Dispatcher.Yield(System.Windows.Threading.DispatcherPriority.Background);
             LastProject? previous = await _lastProjectStore.LoadAsync(_windowLifetime.Token);
+            if (_externalOpen?.ProjectPath is string launchProject)
+            {
+                try { previous = new LastProject(launchProject, ProjectFolderResolver.FindSolution(launchProject)); }
+                catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+                {
+                    MessageBox.Show(this, ex.Message, "Cannot select Unity project");
+                    previous = null;
+                    // Still open the requested source file even if Unity has not generated a solution yet.
+                    _externalOpen = _externalOpen with { ProjectPath = null };
+                }
+            }
             if (previous is not null)
                 await DisplayProjectAsync(previous.ProjectPath, previous.SolutionPath);
             else
@@ -175,6 +191,9 @@ namespace Lavender.App
             AgentStatusText.Text = "Ready";
             WorkspaceContent.Visibility = Visibility.Visible;
             StartupOverlay.Visibility = Visibility.Collapsed;
+            if (_pendingProject is null && (_externalOpen?.ProjectPath is null || string.Equals(
+                Path.TrimEndingDirectorySeparator(_externalOpen.ProjectPath), _selectedProjectPath, StringComparison.OrdinalIgnoreCase)))
+                await ProcessExternalOpenAsync();
             if (_pendingProject is not null)
                 await OpenPendingProjectAsync();
             else if (previous is not null)
@@ -192,6 +211,7 @@ namespace Lavender.App
 
         protected override async void OnClosed(EventArgs e)
         {
+            FinishProgressState();
             _windowLifetime.Cancel();
             _activeRun?.Cancel();
             try
@@ -385,6 +405,7 @@ namespace Lavender.App
             TreeViewItem rootItem = BuildDisplayableExplorerDirectory(selectedPath, includeIfEmpty: true)!;
             FolderView.Items.Add(rootItem);
             rootItem.IsExpanded = true;
+            WatchProjectFiles(selectedPath);
             _projectScanner = new ProjectScanner(selectedPath);
             _projectSearchService = new ProjectSearchService(_projectScanner);
             OpenProjectLabel.Text = "Open project";
@@ -591,6 +612,7 @@ namespace Lavender.App
             _pendingReply.Clear();
             _visibleReply.Clear();
             _replyStreamComplete = false;
+            StartProgressTurn();
             _replyDrained = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             try
             {
@@ -612,13 +634,7 @@ namespace Lavender.App
                 AssistantMarkdown.Render(_streamingReplyText, result.FinalAnswer);
                 if (result.ProjectFilesChanged && _selectedProjectPath is not null)
                 {
-                    FolderView.Items.Clear();
-                    TreeViewItem? root = BuildDisplayableExplorerDirectory(_selectedProjectPath, includeIfEmpty: true);
-                    if (root is not null)
-                    {
-                        FolderView.Items.Add(root);
-                        root.IsExpanded = true;
-                    }
+                    RefreshExplorerFromDisk();
 
                     foreach (var tab in _openFiles)
                         tab.ReloadIfClean();
@@ -639,6 +655,7 @@ namespace Lavender.App
             }
             finally
             {
+                FinishProgressState();
                 _activeRun?.Dispose();
                 _activeRun = null;
                 _replyRevealTimer.Stop();
@@ -725,7 +742,7 @@ namespace Lavender.App
                 IsDocumentEnabled = true,
                 Background = Brushes.Transparent,
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(8, 6, 8, 6),
+                Padding = new Thickness(0, 6, 0, 6),
                 VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
                 Foreground = new SolidColorBrush(Color.FromRgb(216, 216, 216)),
@@ -757,6 +774,7 @@ namespace Lavender.App
 
         private void AppendResponseDelta(string delta)
         {
+            FinishProgressState();
             _streamingReplyText ??= AddAssistantMessage("");
             _pendingReply.Append(delta);
             if (!_replyRevealTimer.IsEnabled)
@@ -812,7 +830,7 @@ namespace Lavender.App
 
         private void ShowConversation(Conversation chat)
         {
-            AgentActivityLog.Clear();
+            FinishProgressState();
             _activeConversationId = chat.Id;
             contextFiles.Clear();
             if (_selectedProjectPath is not null)
@@ -825,9 +843,14 @@ namespace Lavender.App
             ChatMessagesPanel.Children.Clear();
             foreach (ConversationTurn turn in chat.Turns)
             {
-                foreach (var call in turn.Steps.SelectMany(step => step.ToolCalls))
-                    AppendToolActivity(call);
                 AddMessageBubble(turn.UserMessage, true);
+                _progressReceipts.Clear();
+                foreach (var step in turn.Steps.Where(step => step.ToolCalls.Count > 0))
+                {
+                    ShowAgentProgress("Using tools");
+                    foreach (var call in step.ToolCalls) AppendToolActivity(call);
+                    FinishProgressState();
+                }
                 if (!string.IsNullOrWhiteSpace(turn.AssistantMessage))
                     AddMessageBubble(turn.AssistantMessage, false);
                 else
@@ -1134,6 +1157,7 @@ namespace Lavender.App
         /// <summary>Prepares a selected explorer file before adding or activating its editor tab.</summary>
         private void FolderView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
+            if (_refreshingExplorer) return;
             if (e.NewValue is not TreeViewItem item)
             {
                 return;
@@ -1232,7 +1256,9 @@ namespace Lavender.App
         }
 
         /// <summary>Cancels obsolete navigation and prepares a current snapshot before switching tabs.</summary>
-        private async void OpenPreparedFile(OpenFileTab tab)
+        private async void OpenPreparedFile(OpenFileTab tab) => await OpenPreparedFileAsync(tab);
+
+        private async Task OpenPreparedFileAsync(OpenFileTab tab)
         {
             _openFileRequest?.Cancel();
             if (ReferenceEquals(tab, _activeFile) && !tab.IsImage)
@@ -1364,54 +1390,6 @@ namespace Lavender.App
 
         #endregion
 
-        #region Diagnostics, activity logging, and timings
 
-        private void AppendAgentActivity(string message)
-        {
-            AgentActivityLog.AppendText($"{DateTime.Now:HH:mm:ss}  {message}\n");
-            // Keep the visible log bounded; full tool records remain in chat history.
-            if (AgentActivityLog.Text.Length > 60000)
-                AgentActivityLog.Text = AgentActivityLog.Text[^50000..];
-            AgentActivityLog.ScrollToEnd();
-        }
-
-        private void AppendToolActivity(ToolExecutionRecord record)
-        {
-            string target = "";
-            try
-            {
-                using var args = System.Text.Json.JsonDocument.Parse(record.ArgumentsJson);
-                foreach (string key in new[] { "path", "filePath", "query", "destinationPath", "startLine", "endLine" })
-                    if (args.RootElement.TryGetProperty(key, out var value))
-                    {
-                        string text = value.ToString();
-                        target += $" {key}={text[..Math.Min(text.Length, 250)]}";
-                    }
-            }
-            catch (System.Text.Json.JsonException)
-            {
-            }
-
-            string outcome = record.OutcomeMessage ?? record.Error ?? "Tool returned a result.";
-            double seconds = ((record.CompletedAt ?? record.StartedAt) - record.StartedAt).TotalSeconds;
-            string message = $"{record.ToolName}{target}\n  {record.Outcome ?? "returned"} ({seconds:F1}s): {outcome[..Math.Min(outcome.Length, 1000)]}";
-            AppendAgentActivity(message);
-        }
-
-        private void OpenTimings_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                string directory = IndexingTimings.ReportDirectory;
-                Directory.CreateDirectory(directory);
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(directory) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Reports folder: {IndexingTimings.ReportDirectory}\n{ex.Message}", "Indexing timings");
-            }
-        }
-
-        #endregion
     }
 }

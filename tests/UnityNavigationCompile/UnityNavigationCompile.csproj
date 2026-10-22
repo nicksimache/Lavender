@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <DefineConstants>UNITY_EDITOR</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DisableImplicitFrameworkReferences>true</DisableImplicitFrameworkReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../integrations/unity/LavenderOpenAsset.cs" />
+    <Compile Include="../../integrations/unity/Bridge/*.cs" />
+    <Reference Include="mscorlib"><HintPath>$(UnityManagedDirectory)/../UnityReferenceAssemblies/unity-4.8-api/mscorlib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System"><HintPath>$(UnityManagedDirectory)/../UnityReferenceAssemblies/unity-4.8-api/System.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Core"><HintPath>$(UnityManagedDirectory)/../UnityReferenceAssemblies/unity-4.8-api/System.Core.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="netstandard"><HintPath>$(UnityManagedDirectory)/../UnityReferenceAssemblies/unity-4.8-api/Facades/netstandard.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEditor"><HintPath>$(UnityManagedDirectory)/UnityEditor.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(UnityManagedDirectory)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

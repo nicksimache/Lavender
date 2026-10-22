@@ -17,6 +17,7 @@
     <Compile Include="../../src/Lavender.Infrastructure/FileSystem/ProjectFolderResolver.cs" Link="ProjectFolderResolver.cs" />
     <Compile Include="../../src/Lavender.Infrastructure/FileSystem/ProjectScanner.cs" Link="ProjectScanner.cs" />
     <Compile Include="../../src/Lavender.Application/Agent/ConversationModels.cs" Link="ConversationModels.cs" />
+    <Compile Include="../../src/Lavender.Application/Agent/FileProgress.cs" Link="FileProgress.cs" />
     <Compile Include="../../src/Lavender.Application/Agent/ConversationEvidence.cs" Link="ConversationEvidence.cs" />
     <Compile Include="../../src/Lavender.Application/Agent/ProjectSnapshot.cs" Link="ProjectSnapshot.cs" />
     <Compile Include="../../src/Lavender.Infrastructure/AI/JsonConversationStore.cs" Link="JsonConversationStore.cs" />

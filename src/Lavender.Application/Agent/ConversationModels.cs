@@ -1,8 +1,20 @@
 namespace Lavender.Application.Agent;
 
 /// <summary>Saved discussion for a project: each turn contains model steps and their tool-call records.</summary>
-public sealed class Conversation
+public sealed class Conversation : System.ComponentModel.INotifyPropertyChanged
 {
+    private string? _generatedTitle;
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public string? GeneratedTitle
+    {
+        get => _generatedTitle;
+        set
+        {
+            _generatedTitle = value;
+            PropertyChanged?.Invoke(this, new(nameof(Title)));
+        }
+    }
+    public bool TitleGenerationAttempted { get; set; }
     public required Guid Id { get; init; }
     public required DateTimeOffset CreatedAt { get; init; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -11,7 +23,7 @@ public sealed class Conversation
     public List<string> ContextFiles { get; set; } = [];
     public string? Summary { get; set; }
     public int SummarizedTurnCount { get; set; }
-    public string Title => Turns.FirstOrDefault()?.UserMessage is string text
+    public string Title => !string.IsNullOrWhiteSpace(GeneratedTitle) ? GeneratedTitle : Turns.FirstOrDefault()?.UserMessage is string text
         ? text[..Math.Min(text.Length, 70)] : "New chat";
     public List<ConversationTurn> Turns { get; init; } = [];
 }
@@ -42,6 +54,7 @@ public sealed class ToolExecutionRecord
     public required string ToolName { get; init; }
     public required string ArgumentsJson { get; init; }
     public string? ResultJson { get; set; }
+    public FileProgress? FileProgress { get; set; }
     public string? Error { get; set; }
     public string? Outcome { get; set; }
     public string? OutcomeMessage { get; set; }

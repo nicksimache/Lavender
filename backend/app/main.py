@@ -315,8 +315,10 @@ def embed_project(request: EmbedProjectRequest):
         write_started = time.perf_counter()
         clustering_before = timings["clustering_ms"]
         with changed:
-            if name in db.table_names():
-                db.drop_table(name)
+            # table_names() is paginated (ten names by default), so membership in
+            # that first page cannot tell us whether this project's table exists.
+            # Remove this snapshot directly; keep the independent embedding cache.
+            db.drop_table(name, ignore_missing=True)
             if rows:
                 db.create_table(name, rows)
             state["indexed_chunks"] = len(rows)

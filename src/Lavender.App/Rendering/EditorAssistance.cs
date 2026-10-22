@@ -10,7 +10,7 @@ using Microsoft.CodeAnalysis.Classification;
 namespace Lavender.App.Rendering;
 
 /// <summary>Connects the editor to Roslyn without putting language-service logic in MainWindow.</summary>
-public sealed class EditorAssistance : IAsyncDisposable
+public sealed partial class EditorAssistance : IAsyncDisposable
 {
     private const int TypingDebounceMilliseconds = 50; // We don't use this anymore
     private const int InitParallelClassificationPasses = 2;
@@ -52,6 +52,9 @@ public sealed class EditorAssistance : IAsyncDisposable
 
         _editor.Foreground = EditorTheme.Brush(EditorTheme.Text);
         _editor.TextArea.TextView.LineTransformers.Add(_colors);
+        _editor.TextArea.TextView.BackgroundRenderers.Add(_diagnosticLines);
+        _editor.MouseHover += DiagnosticHover;
+        _editor.MouseHoverStopped += DiagnosticHoverStopped;
 
         _editor.TextChanged += TextChanged;
         _editor.DocumentChanged += DocumentChanged;
@@ -95,6 +98,7 @@ public sealed class EditorAssistance : IAsyncDisposable
             _colors.Spans = preparedSpans;
             _setLoading(false);
             _editor.TextArea.TextView.Redraw();
+            QueueDiagnostics();
         }
         else
         {
@@ -193,6 +197,8 @@ public sealed class EditorAssistance : IAsyncDisposable
     private void Refresh(bool debounce = false)
     {
         ++_revision;
+
+        QueueDiagnostics();
 
         if(!debounce)
         {
@@ -454,6 +460,10 @@ public sealed class EditorAssistance : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _lifetime.Cancel();
+        _diagnosticRequest?.Cancel();
+        _editor.MouseHover -= DiagnosticHover;
+        _editor.MouseHoverStopped -= DiagnosticHoverStopped;
+        _editor.TextArea.TextView.BackgroundRenderers.Remove(_diagnosticLines);
         _popup?.Close();
         _editor.TextChanged -= TextChanged;
         _editor.DocumentChanged -= DocumentChanged;

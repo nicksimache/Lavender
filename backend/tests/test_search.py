@@ -173,6 +173,29 @@ class SearchTests(unittest.TestCase):
             changed = self.http.post("/embed-project", json={"chunks": chunks}).json()
             self.assertEqual(changed["timings"]["cache_hits"], 0)
 
+    def test_reindex_beyond_first_table_listing_page(self):
+        self.backend.client.embeddings.create.side_effect = self.fake_embeddings
+        # LanceDB table_names() returns only ten names by default. Put the real
+        # project after that page, as happens after opening several projects.
+        for i in range(11):
+            self.backend.db.create_table(f"aaa_fixture_{i:02}", [{"value": i}])
+        for scenario in ("cached", "uncached", "empty"):
+            with self.subTest(scenario=scenario):
+                initial = self.http.post("/embed-project", json={"chunks": self.chunks(2)})
+                self.assertEqual(initial.status_code, 200, initial.text)
+                self.assertNotIn(self.backend.TABLE_NAME, self.backend.db.table_names())
+                chunks = self.chunks(1) if scenario != "empty" else []
+                if scenario == "uncached":
+                    chunks[0]["embedding_text"] = "new implementation beyond first page"
+                response = self.http.post("/embed-project", json={"chunks": chunks})
+                self.assertEqual(response.status_code, 200, response.text)
+                if chunks:
+                    self.assertEqual(self.backend.db.open_table(self.backend.TABLE_NAME).count_rows(), 1)
+                else:
+                    self.assertNotIn(self.backend.TABLE_NAME, self.backend.db)
+                self.assertEqual(response.json()["timings"]["embedding_requests"], int(scenario == "uncached"))
+                self.assertEqual(self.backend.db.open_table("aaa_fixture_00").count_rows(), 1)
+
     def test_empty_project_removes_old_rows(self):
         self.seed()
         result = self.http.post("/embed-project", json={"chunks": []})
