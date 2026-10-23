@@ -21,6 +21,8 @@ public sealed class AgentRunner
         Read a whole file only when its overall structure is needed. Avoid repeatedly rereading whole files after small edits.
         Your tool-free response is the final answer shown to the user; there is no separate rewrite.
         Report only confirmed changes. Distinguish failed, blocked and timed-out actions from successful edits.
+        Explain unresolved tool failures and their impact in plain language in the final answer. Avoid raw exceptions and stack traces.
+        A connection failure alone does not establish that a Unity project is missing; state only the cause supported by tool evidence.
         Older read results may be replaced with superseded-result notices; use the newer referenced result or reread relevant lines.
         For tasks involving project sprites, tilesets, textures or other image assets, first use lavender_list_assets.
         Use lavender_inspect_image to see candidate assets before making visual claims or choosing sprite regions.
@@ -247,10 +249,11 @@ public sealed class AgentRunner
         }
         catch (Exception ex)
         {
-            turn.Status = AgentRunStatus.Failed;
-            turn.StopReason = ex.Message;
-            await SaveAsync(conversation, CancellationToken.None);
-            throw;
+            string explanation = ErrorExplanationService.Explain("Continue the agent task", ex.Message);
+            if (explanation == ErrorExplanationService.Fallback)
+                explanation = "I couldn't finish this request. Completion of the remaining work hasn't been confirmed.";
+            return await FinishAsync(conversation, turn, explanation, AgentRunStatus.Failed,
+                turn.Steps.Count, turn.Steps.Sum(step => step.ToolCalls.Count), ex.Message, CancellationToken.None);
         }
     }
 
@@ -493,7 +496,7 @@ public sealed class AgentRunner
                 record.CompletedAt = DateTimeOffset.UtcNow;
                 results[index] = new ToolChatMessage(call.Id, record.Error);
                 workingContext.RecordExecution(record);
-                ToolCompleted?.Invoke(record);
+                PublishToolCompletion(record);
                 continue;
             }
 
@@ -551,10 +554,18 @@ public sealed class AgentRunner
                 }
                 record.CompletedAt = DateTimeOffset.UtcNow;
                 workingContext.RecordExecution(record);
-                ToolCompleted?.Invoke(record);
+                PublishToolCompletion(record);
             }
         }
         return Enumerable.Range(0, calls.Count).Select(i => results[i]).ToArray();
+    }
+
+    private void PublishToolCompletion(ToolExecutionRecord record)
+    {
+        if (record.Outcome is "failed" or "blocked" or "timed_out" or "cancelled")
+            record.UserExplanation = ErrorExplanationService.Explain(record.ToolName,
+                record.OutcomeMessage ?? record.Error, record.Outcome);
+        ToolCompleted?.Invoke(record);
     }
 
     private async Task<AgentRunResult> FinishAtLimitAsync(

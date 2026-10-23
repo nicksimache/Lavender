@@ -56,6 +56,7 @@ public sealed class ToolExecutionRecord
     public string? ResultJson { get; set; }
     public FileProgress? FileProgress { get; set; }
     public string? Error { get; set; }
+    public string? UserExplanation { get; set; }
     public string? Outcome { get; set; }
     public string? OutcomeMessage { get; set; }
     public bool WasBlockedAsRepeat { get; set; }

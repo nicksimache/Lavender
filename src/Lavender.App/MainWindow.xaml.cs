@@ -211,6 +211,8 @@ namespace Lavender.App
 
         protected override async void OnClosed(EventArgs e)
         {
+            FlushProgressReveals();
+            _replyRevealTimer.Stop();
             FinishProgressState();
             _windowLifetime.Cancel();
             _activeRun?.Cancel();
@@ -627,7 +629,7 @@ namespace Lavender.App
                 }
 
                 _replyStreamComplete = true;
-                if (_pendingReply.Length == 0)
+                if (_pendingReply.Length == 0 && _progressRevealQueue.Count == 0)
                     _replyDrained.TrySetResult(true);
                 await _replyDrained.Task.WaitAsync(_activeRun.Token);
                 _streamingReplyText ??= AddAssistantMessage(result.FinalAnswer);
@@ -655,6 +657,7 @@ namespace Lavender.App
             }
             finally
             {
+                FlushProgressReveals();
                 FinishProgressState();
                 _activeRun?.Dispose();
                 _activeRun = null;
@@ -783,6 +786,7 @@ namespace Lavender.App
 
         private void RevealNextReplyCharacter(object? sender, EventArgs e)
         {
+            if (RevealNextProgressCharacter()) return;
             if (_pendingReply.Length > 0 && _streamingReplyText is not null)
             {
                 string next = StringInfo.GetNextTextElement(_pendingReply.ToString());
@@ -830,6 +834,7 @@ namespace Lavender.App
 
         private void ShowConversation(Conversation chat)
         {
+            FlushProgressReveals();
             FinishProgressState();
             _activeConversationId = chat.Id;
             contextFiles.Clear();
@@ -845,12 +850,14 @@ namespace Lavender.App
             {
                 AddMessageBubble(turn.UserMessage, true);
                 _progressReceipts.Clear();
+                _restoringProgress = true;
                 foreach (var step in turn.Steps.Where(step => step.ToolCalls.Count > 0))
                 {
                     ShowAgentProgress("Using tools");
                     foreach (var call in step.ToolCalls) AppendToolActivity(call);
-                    FinishProgressState();
                 }
+                FinishProgressState();
+                _restoringProgress = false;
                 if (!string.IsNullOrWhiteSpace(turn.AssistantMessage))
                     AddMessageBubble(turn.AssistantMessage, false);
                 else
