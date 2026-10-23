@@ -326,7 +326,7 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(retried["timings"]["cache_hits"], 35)
         self.assertEqual(retried["timings"]["embedded_chunks"], 1)
 
-    def test_single_assignment_means_and_complete_group_retrieval(self):
+    def test_spherical_means_and_complete_group_retrieval(self):
         import numpy as np
 
         rows = [
@@ -338,7 +338,8 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(
             [[r["id"] for r in g["rows"]] for g in groups], [["0", "2", "3"], ["1", "4"]]
         )
-        np.testing.assert_allclose(groups[0]["centroid"], [0.9, 0.1])
+        np.testing.assert_allclose(groups[0]["centroid"], self.backend.unit_vectors(
+            [[1.0, 0.0], [0.9, 0.1], [0.8, 0.2]]).mean(axis=0))
         found, selected = self.backend.search_groups(groups, [1.0, 0.0], 1)
         self.assertEqual({r["id"] for r in found}, {"0", "2", "3"})
         self.assertEqual(selected[0]["chunk_count"], 3)
@@ -346,14 +347,14 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(len(found), 5)
         self.assertEqual(len(selected), 2)
 
-    def test_default_25_seeds_and_duplicate_vectors(self):
+    def test_duplicate_vectors_remain_an_unsplit_leaf(self):
         rows = [dict(id=str(i), chunk_order=i, vector=[1.0, 0.0]) for i in range(60)]
         groups = self.backend.build_groups(rows)
-        self.assertEqual(len(groups), 25)
+        self.assertEqual(len(groups), 1)
         self.assertEqual(sum(len(g["rows"]) for g in groups), 60)
         found, _ = self.backend.search_groups(groups, [1.0, 0.0], 1)
-        self.assertEqual(len(found), 36)  # No previous 25-chunk result cap.
-        self.assertEqual(len(self.backend.build_groups(rows[:3])), 3)
+        self.assertEqual(len(found), 60)
+        self.assertEqual(len(self.backend.build_groups(rows[:3])), 1)
         self.assertEqual(self.backend.build_groups([]), [])
 
     def test_group_search_uses_centroids_not_nearest_individual(self):
@@ -364,6 +365,58 @@ class SearchTests(unittest.TestCase):
         found, selected = self.backend.search_groups(groups, [1.0, 0.0], 1)
         self.assertEqual(selected[0]["group_id"], 1)
         self.assertEqual([r["id"] for r in found], ["group-member"])
+
+    def test_hierarchy_covers_chunks_once_and_is_deterministic(self):
+        import numpy as np
+
+        rng = np.random.default_rng(12)
+        rows = [dict(id=str(i), chunk_order=i, vector=v.tolist())
+                for i, v in enumerate(rng.normal(size=(160, 8)))]
+        with patch.object(self.backend, "CLUSTER_COUNT", 3), patch.object(self.backend, "LEAF_CHUNK_TARGET", 8):
+            groups = self.backend.build_groups(rows)
+            again = self.backend.build_groups(list(reversed(rows)))
+        self.assertTrue(any("children" in g for g in groups))
+        leaves = lambda tree: [leaf for node in tree for leaf in node.get("children", [node])]
+        members = lambda tree: [[r["id"] for r in leaf["rows"]] for leaf in leaves(tree)]
+        self.assertEqual(members(groups), members(again))
+        ids = [r["id"] for leaf in leaves(groups) for r in leaf["rows"]]
+        self.assertEqual(sorted(ids), sorted(r["id"] for r in rows))
+        self.assertEqual(len({leaf["id"] for leaf in leaves(groups)}), len(leaves(groups)))
+        self.assertTrue(all("children" not in leaf for leaf in leaves(groups)))
+
+    def test_search_can_find_leaf_in_second_coarse_branch(self):
+        groups = [
+            dict(id=0, centroid=[1., 0.], children=[
+                dict(id=1, centroid=[0.8, 0.6], rows=[dict(id="far", vector=[0.8, 0.6])])]),
+            dict(id=2, centroid=[0.9, 0.1], children=[
+                dict(id=3, centroid=[1., 0.], rows=[dict(id="exact", vector=[1., 0.])])]),
+        ]
+        found, selected = self.backend.search_groups(groups, [1., 0.], 1)
+        self.assertEqual([r["id"] for r in found], ["exact"])
+        self.assertEqual(selected[0]["group_id"], 3)
+
+    def test_zero_vectors_and_single_chunk(self):
+        rows = [dict(id=str(i), vector=[0., 0.]) for i in range(40)]
+        groups = self.backend.build_groups(rows)
+        found, _ = self.backend.search_groups(groups, [0., 0.], 2)
+        self.assertEqual(len(found), 40)
+        self.assertTrue(all(r["_distance"] == 1 for r in found))
+        self.assertEqual(len(self.backend.build_groups(rows[:1])), 1)
+
+    def test_kmeans_refines_assignments_and_ignores_vector_magnitude(self):
+        import numpy as np
+
+        rng = np.random.default_rng(7)
+        vectors = self.backend.unit_vectors(rng.normal(size=(100, 6)))
+        with patch.object(self.backend, "KMEANS_MAX_ITERATIONS", 1):
+            initial = self.backend.spherical_kmeans(vectors, 4)
+        refined = self.backend.spherical_kmeans(vectors, 4)
+        def objective(partitions):
+            return sum(float((vectors[ids] @ self.backend.unit_vectors(vectors[ids].mean(axis=0))).sum())
+                       for ids in partitions)
+        self.assertGreater(objective(refined), objective(initial) + 1e-6)
+        scaled = self.backend.spherical_kmeans(vectors * rng.uniform(0.1, 100, (100, 1)), 4)
+        self.assertEqual([ids.tolist() for ids in refined], [ids.tolist() for ids in scaled])
 
     def test_cached_and_cold_group_memberships_agree(self):
         self.backend.client.embeddings.create.side_effect = self.fake_embeddings

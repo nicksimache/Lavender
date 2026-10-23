@@ -89,6 +89,9 @@ EMBED_MODEL = "text-embedding-3-small"
 SOURCE_REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest().upper()
 BATCH_SIZE = 35
 CLUSTER_COUNT = 25
+LEAF_CHUNK_TARGET = 32
+KMEANS_MAX_ITERATIONS = 30
+SEARCH_BRANCH_COUNT = 2
 CACHE_PATH = Path("./lavender_vectors/embedding-cache.sqlite3")
 REPORT_DIRECTORY = Path(__file__).resolve().parent / "artifacts" / "indexing"
 # The condition protects published search snapshots and wakes searches as batches arrive.
@@ -147,55 +150,80 @@ def unit_vectors(vectors):
     return np.divide(values, norms, out=np.zeros_like(values), where=norms > 0)
 
 
+def spherical_kmeans(vectors, count):
+    """Deterministic farthest-point seeds followed by cosine Lloyd iterations."""
+    normalized = unit_vectors(vectors)
+    seeds = [0]
+    nearest = np.clip(1 - normalized @ normalized[0], 0, 2)
+    while len(seeds) < min(count, len(normalized)):
+        candidate = int(np.argmax(nearest))
+        if nearest[candidate] <= 1e-10:
+            break  # Identical directions cannot form meaningful separate clusters.
+        seeds.append(candidate)
+        nearest = np.minimum(nearest, np.clip(1 - normalized @ normalized[candidate], 0, 2))
+        nearest[seeds] = 0
+    centers = normalized[seeds].copy()
+    previous = None
+    for _ in range(KMEANS_MAX_ITERATIONS):
+        assignments = np.argmax(normalized @ centers.T, axis=1)
+        if previous is not None and np.array_equal(assignments, previous):
+            break
+        previous = assignments.copy()
+        centers = np.asarray([
+            unit_vectors(normalized[assignments == i].mean(axis=0))
+            if np.any(assignments == i) else centers[i]
+            for i in range(len(centers))
+        ])
+    return [np.flatnonzero(assignments == i) for i in range(len(centers))
+            if np.any(assignments == i)]
+
+
 def build_groups(rows):
-    """One assignment pass against the first K seeds, then arithmetic-mean centroids."""
+    """Two-level spherical K-means; small or unsplittable groups remain leaves."""
     ordered = sorted(rows, key=lambda row: row.get("chunk_order", 0))
     if not ordered:
         return []
-    vectors = np.asarray([row["vector"] for row in ordered], dtype=np.float64)
-    normalized = unit_vectors(vectors)
-    k = min(CLUSTER_COUNT, len(ordered))
-    assignments = np.argmax(normalized @ normalized[:k].T, axis=1)
-    # A seed owns itself when identical seeds tie, keeping all K groups nonempty.
-    assignments[:k] = np.arange(k)
-    return [
-        dict(
-            id=i,
-            centroid=vectors[assignments == i].mean(axis=0),
-            rows=[ordered[j] for j in np.flatnonzero(assignments == i)],
-        )
-        for i in range(k)
-    ]
+    next_id = 0
+
+    def partition(members, depth):
+        nonlocal next_id
+        vectors = unit_vectors([row["vector"] for row in members])
+        count = min(CLUSTER_COUNT, max(2, (len(members) + LEAF_CHUNK_TARGET - 1) // LEAF_CHUNK_TARGET))
+        partitions = spherical_kmeans(vectors, count)
+        nodes = []
+        for indices in partitions:
+            subset = [members[int(i)] for i in indices]
+            node = dict(id=next_id, centroid=vectors[indices].mean(axis=0), rows=subset)
+            next_id += 1
+            if depth < 2 and len(subset) > LEAF_CHUNK_TARGET and len(subset) < len(members):
+                node["children"] = partition(subset, depth + 1)
+            nodes.append(node)
+        return nodes
+
+    return partition(ordered, 1)
 
 
 def search_groups(groups, query_vector, count):
-    if not groups:
+    if not groups or count <= 0:
         return [], []
     query = unit_vectors(query_vector)
-    # Unit-length vectors turn a dot product into cosine similarity; distance is 1 - similarity.
-    distances = np.clip(1 - unit_vectors([g["centroid"] for g in groups]) @ query, 0, 2)
-    selected = np.argsort(distances, kind="stable")[:count]
+
+    def rank(nodes):
+        distances = np.clip(1 - unit_vectors([g["centroid"] for g in nodes]) @ query, 0, 2)
+        return [(nodes[int(i)], float(distances[i])) for i in np.argsort(distances, kind="stable")]
+
+    # Explore multiple coarse branches before selecting the nearest leaf groups.
+    branches = rank(groups)[:max(SEARCH_BRANCH_COUNT, count)]
+    candidates = [leaf for node, _ in branches for leaf in node.get("children", [node])]
+    selected = rank(candidates)[:count]
     results, summaries = [], []
-    for index in selected:
-        group = groups[index]
-        distance = float(distances[index])
-        summaries.append(
-            dict(group_id=group["id"], distance=distance, chunk_count=len(group["rows"]))
-        )
-        chunk_distances = np.clip(
-            1 - unit_vectors([r["vector"] for r in group["rows"]]) @ query, 0, 2
-        )
+    for group, distance in selected:
+        summaries.append(dict(group_id=group["id"], distance=distance, chunk_count=len(group["rows"])))
+        chunk_distances = np.clip(1 - unit_vectors([r["vector"] for r in group["rows"]]) @ query, 0, 2)
         for row, chunk_distance in zip(group["rows"], chunk_distances):
-            results.append(
-                dict(
-                    row,
-                    _distance=float(chunk_distance),
-                    group_id=group["id"],
-                    group_distance=distance,
-                )
-            )
-    # Rank within the selected groups, without dropping any members.
-    results.sort(key=lambda row: (row["group_distance"], row["_distance"]))
+            results.append(dict(row, _distance=float(chunk_distance), group_id=group["id"], group_distance=distance))
+    # Rank individual chunks across all selected leaves; preserve every leaf member.
+    results.sort(key=lambda row: row["_distance"])
     return results, summaries
 
 

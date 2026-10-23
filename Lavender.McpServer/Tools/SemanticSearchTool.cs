@@ -19,12 +19,12 @@ public sealed class SemanticSearchTool
     }
 
     [McpServerTool(Name = "lavender_semantic_search")]
-    [Description("Selects the nearest one or two semantic groups by centroid and returns all their chunks, including during indexing. Groups use 25 initial chunk seeds and one assignment/averaging pass. Weak centroid matches wait for more batches. Partial or low-confidence results are marked; use source reading to verify them.")]
+    [Description("Searches a two-level spherical K-means hierarchy, explores multiple coarse branches, and returns all chunks from the nearest one or two candidate leaf groups ranked by chunk cosine distance. Weak centroid matches wait for more batches. Partial or low-confidence results are marked; use source reading to verify them.")]
     public async Task<SemanticSearchResult> SearchAsync(
         [Description("Natural-language query describing the code to find.")]
         string query,
 
-        [Description("Number of nearest groups to return: 1 or 2, default 2. Every chunk in the selected groups is returned.")]
+        [Description("Number of candidate leaf groups to return: 1 or 2, default 2. Every chunk in the selected leaves is returned after exploring multiple coarse branches.")]
         int groupCount = 2,
         [Description("Maximum centroid cosine distance for an early result during indexing. Lower is stricter; default 0.65. This is a heuristic, not a relevance guarantee.")]
         double maxDistance = 0.65,
